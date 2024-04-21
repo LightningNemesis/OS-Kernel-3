@@ -10,9 +10,9 @@
 # Setting any of these variables will control which parts of the source tree
 # are built. To enable something set it to 1, otherwise set it to 0.
 #
-     DRIVERS=0
-         VFS=0
-        S5FS=0
+     DRIVERS=1
+         VFS=2
+        S5FS=1
           VM=0
      DYNAMIC=0
 # When you finish S5FS, first enable "VM"; once this is working, then enable
@@ -63,7 +63,7 @@
 # changed at runtime by modifying the dbg_modes global variable.
 #
 # All debug statements
-        DBG=all
+        DBG=error,test
 # Change to this if the above causes the debug printout window to freeze
 #       DBG=all,-thr,-pagealloc,-mm
 # Change to this for no debug statements
