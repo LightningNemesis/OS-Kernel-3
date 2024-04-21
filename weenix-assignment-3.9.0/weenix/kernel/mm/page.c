@@ -39,15 +39,17 @@ GDB_DEFINE_HOOK(page_free, void *addr, int npages)
 static list_t pagegroup_list;
 static uintptr_t page_freecount;
 
-struct pagegroup {
-        list_t       pg_freelist[PAGE_NSIZES];
-        void        *pg_map[PAGE_NSIZES];
-        uintptr_t    pg_baseaddr;
-        uintptr_t    pg_endaddr;
-        list_link_t  pg_link;
+struct pagegroup
+{
+        list_t pg_freelist[PAGE_NSIZES];
+        void *pg_map[PAGE_NSIZES];
+        uintptr_t pg_baseaddr;
+        uintptr_t pg_endaddr;
+        list_link_t pg_link;
 };
 
-struct freepage {
+struct freepage
+{
         list_link_t fp_link;
 };
 
@@ -71,7 +73,8 @@ _pagegroup_create(uintptr_t start, uintptr_t end)
          * though some pages will be unavailable since they
          * are being used as bitmaps */
         int order;
-        for (order = 1; order < PAGE_NSIZES; ++order) {
+        for (order = 1; order < PAGE_NSIZES; ++order)
+        {
                 uintptr_t count = npages >> order;
                 count = ((count - 1) & ~((uintptr_t)0x7)) + 8;
                 count = count >> 3;
@@ -88,9 +91,11 @@ _pagegroup_create(uintptr_t start, uintptr_t end)
 
         /* put pages which do not fit nicely into the largest
          * order and add them to smaller buckets */
-        for (order = 0; order < PAGE_NSIZES - 1; ++order) {
+        for (order = 0; order < PAGE_NSIZES - 1; ++order)
+        {
                 list_init(&group->pg_freelist[order]);
-                if (npages & (1 << order)) {
+                if (npages & (1 << order))
+                {
                         end -= (1 << order) << PAGE_SHIFT;
                         list_insert_head(&group->pg_freelist[order], &((struct freepage *)end)->fp_link);
                 }
@@ -100,7 +105,8 @@ _pagegroup_create(uintptr_t start, uintptr_t end)
         KASSERT(0 == (end - start) % (1 << order));
         list_init(&group->pg_freelist[order]);
         uintptr_t current = start;
-        while (current < end) {
+        while (current < end)
+        {
                 list_insert_head(&group->pg_freelist[order], &((struct freepage *)current)->fp_link);
                 current += (1 << order) << PAGE_SHIFT;
         }
@@ -112,31 +118,32 @@ static struct pagegroup *
 _pagegroup_from_address(uintptr_t addr)
 {
         struct pagegroup *group;
-        list_iterate_begin(&pagegroup_list, group, struct pagegroup, pg_link) {
+        list_iterate_begin(&pagegroup_list, group, struct pagegroup, pg_link)
+        {
                 if (addr >= group->pg_baseaddr && addr < group->pg_endaddr)
                         return group;
-        } list_iterate_end();
+        }
+        list_iterate_end();
         return NULL;
 }
 
-void
-page_init()
+void page_init()
 {
         list_init(&pagegroup_list);
         page_freecount = 0;
 }
 
-void
-page_add_range(uintptr_t start, uintptr_t end)
+void page_add_range(uintptr_t start, uintptr_t end)
 {
         dbgq(DBG_MM, "Page System adding range: 0x%08x to 0x%08x\n", start, end);
 
         /* page align the start and end */
-        start = (uintptr_t) PAGE_ALIGN_DOWN(start);
-        end = (uintptr_t) PAGE_ALIGN_DOWN(end);
+        start = (uintptr_t)PAGE_ALIGN_DOWN(start);
+        end = (uintptr_t)PAGE_ALIGN_DOWN(end);
 
         struct pagegroup *group = _pagegroup_create(start, end);
-        if (group->pg_baseaddr < group->pg_endaddr) {
+        if (group->pg_baseaddr < group->pg_endaddr)
+        {
                 list_insert_tail(&pagegroup_list, &group->pg_link);
                 page_freecount += ADDR_TO_PN(group->pg_endaddr - group->pg_baseaddr);
         }
@@ -179,7 +186,8 @@ __page_split(struct pagegroup *group, uint32_t order)
         list_remove_head(&group->pg_freelist[order]);
 
         /* splitting the page requires marking it as allocated */
-        if (likely(order < PAGE_NSIZES - 1)) {
+        if (likely(order < PAGE_NSIZES - 1))
+        {
                 uintptr_t index = _pagegroup_calculate_index(group, order + 1, target);
                 bit_flip(group->pg_map[order + 1], index);
         }
@@ -211,20 +219,26 @@ _page_split(int order)
 #endif
         int norder;
 
-        do {
+        do
+        {
                 /* Find the first free block of greater size than requested. */
-                for (norder = order + 1; norder < PAGE_NSIZES; norder++) {
+                for (norder = order + 1; norder < PAGE_NSIZES; norder++)
+                {
                         struct pagegroup *group;
-                        list_iterate_begin(&pagegroup_list, group, struct pagegroup, pg_link) {
-                                if (!list_empty(&group->pg_freelist[norder])) {
-                                        while (norder > order) {
+                        list_iterate_begin(&pagegroup_list, group, struct pagegroup, pg_link)
+                        {
+                                if (!list_empty(&group->pg_freelist[norder]))
+                                {
+                                        while (norder > order)
+                                        {
                                                 __page_split(group, norder);
                                                 --norder;
                                         }
                                         KASSERT(!list_empty(&group->pg_freelist[order]));
                                         return group;
                                 }
-                        } list_iterate_end();
+                        }
+                        list_iterate_end();
                 }
 
                 dbg(DBG_PAGEALLOC, "WARNING, cannot allocate order=%u\n", order);
@@ -256,12 +270,15 @@ _page_alloc_order(uint32_t order)
         uintptr_t addr;
         struct pagegroup *group;
 
-        list_iterate_begin(&pagegroup_list, group, struct pagegroup, pg_link) {
+        list_iterate_begin(&pagegroup_list, group, struct pagegroup, pg_link)
+        {
                 if (!list_empty(&group->pg_freelist[order]))
                         goto found;
-        } list_iterate_end();
+        }
+        list_iterate_end();
 
-        if (NULL != (group = _page_split(order))) {
+        if (NULL != (group = _page_split(order)))
+        {
                 KASSERT(!list_empty(&group->pg_freelist[order]));
                 goto found;
         }
@@ -284,7 +301,7 @@ found:
 #endif /* MM_POISON */
 
         page_freecount -= (1 << order);
-        return (void *) addr;
+        return (void *)addr;
 }
 
 static void
@@ -292,7 +309,8 @@ __page_join(struct pagegroup *group, int order, uintptr_t addr)
 {
         uintptr_t index;
         while (PAGE_NSIZES - 1 > order && !bit_check(group->pg_map[order + 1],
-                        index = _pagegroup_calculate_index(group, order + 1, (uintptr_t)addr))) {
+                                                     index = _pagegroup_calculate_index(group, order + 1, (uintptr_t)addr)))
+        {
                 uintptr_t offset = addr - group->pg_baseaddr;
                 uintptr_t buddy = addr + ((1 << order) << PAGE_SHIFT) * ((((offset >> PAGE_SHIFT) >> order) & 0x1) ? -1 : 1);
 
@@ -336,7 +354,8 @@ _page_free_order(void *addr, int order)
         list_insert_head(&group->pg_freelist[order], &((struct freepage *)addr)->fp_link);
         page_freecount += (1 << order);
 
-        if (PAGE_NSIZES - 1 > order) {
+        if (PAGE_NSIZES - 1 > order)
+        {
                 uintptr_t index = _pagegroup_calculate_index(group, order + 1, (uintptr_t)addr);
                 bit_flip(group->pg_map[order + 1], index);
                 __page_join(group, order, (uintptr_t)addr);
@@ -353,7 +372,7 @@ _page_free_order(void *addr, int order)
 void *
 page_alloc(void)
 {
-        void *addr =  _page_alloc_order(0);
+        void *addr = _page_alloc_order(0);
         GDB_CALL_HOOK(page_alloc, addr, 1);
         return addr;
 }
@@ -362,8 +381,7 @@ page_alloc(void)
  * Free one page of memory (which was allocated with page_alloc())
  * @param addr the address of the page to be freed
  */
-void
-page_free(void *addr)
+void page_free(void *addr)
 {
         GDB_CALL_HOOK(page_free, addr, 1);
         _page_free_order(addr, 0);
@@ -394,8 +412,7 @@ page_alloc_n(uint32_t npages)
  * Frees a block of npages pages allocated with page_alloc_n().
  * @param npages the size of the block (as given to page_alloc_n)
  */
-void
-page_free_n(void *start, uint32_t npages)
+void page_free_n(void *start, uint32_t npages)
 {
         int order;
 

@@ -1,3 +1,20 @@
+/******************************************************************************/
+/* Important Spring 2024 CSCI 402 usage information:                          */
+/*                                                                            */
+/* This fils is part of CSCI 402 kernel programming assignments at USC.       */
+/*         53616c7465645f5fd1e93dbf35cbffa3aef28f8c01d8cf2ffc51ef62b26a       */
+/*         f9bda5a68e5ed8c972b17bab0f42e24b19daa7bd408305b1f7bd6c7208c1       */
+/*         0e36230e913039b3046dd5fd0ba706a624d33dbaa4d6aab02c82fe09f561       */
+/*         01b0fd977b0051f0b0ce0c69f7db857b1b5e007be2db6d42894bf93de848       */
+/*         806d9152bd5715e9                                                   */
+/* Please understand that you are NOT permitted to distribute or publically   */
+/*         display a copy of this file (or ANY PART of it) for any reason.    */
+/* If anyone (including your prospective employer) asks you to post the code, */
+/*         you must inform them that you do NOT have permissions to do so.    */
+/* You are also NOT permitted to remove or alter this comment block.          */
+/* If this comment block is removed or altered in a submitted file, 20 points */
+/*         will be deducted.                                                  */
+/******************************************************************************/
 
 #include "globals.h"
 #include "errno.h"
@@ -31,83 +48,12 @@
  * After error checking most of the work of this function is
  * done by vmmap_map(), but remember to clear the TLB.
  */
-int
-do_mmap(void *addr, size_t len, int prot, int flags,
-        int fd, off_t off, void **ret)
+int do_mmap(void *addr, size_t len, int prot, int flags,
+            int fd, off_t off, void **ret)
 {
-        // NOT_YET_IMPLEMENTED("VM: do_mmap");
-
-        uint32_t lopage;
-        vnode_t *vn = NULL;
-        file_t *file = NULL;
-        uint32_t npages;
-        vmarea_t *new;
-        int err;
-
-        /* do some error checking */ 
-        // err. off and addr(if not NULL) should be page aligned
-        if(!PAGE_ALIGNED(off) || (addr != NULL && !PAGE_ALIGNED(addr))){
-                return -EINVAL;
-        }
-        // err. len should be greater than 0, and the endaddr should not exceed user space
-        if((uint32_t)addr + len > USER_MEM_HIGH || len == 0){
-                return -EINVAL;
-        }
-        // err. flag should be either PRIVATE or SHARED
-        if(!(flags & MAP_PRIVATE) && !(flags & MAP_SHARED)){
-                return -EINVAL;
-        }
-        // err. when flag is FIXED, addr cannot be null
-        if(flags & MAP_FIXED && addr == NULL){
-                return -EINVAL;
-        }
-
-        // init lopage for vmmap_map
-        lopage = (addr == NULL) ? 0 : ADDR_TO_PN(addr);
-
-        // init file if it is not MAP_ANON
-        if(!(flags & MAP_ANON)){
-                // remember to close!
-                if(fd == -1 || (file = fget(fd)) == NULL){
-                        return -EBADF;
-                }
-                vn = file->f_vnode;
-                // err. file access not permitted, i.e. write on not-copy-on-write
-                if(!(file->f_mode & FMODE_WRITE) && (prot & PROT_WRITE) && !(flags & MAP_PRIVATE)){
-                        fput(file);
-                        return -EACCES;
-                }
-        }
-
-        // calculate npages
-        npages = len / PAGE_SIZE;
-        if (len % PAGE_SIZE != 0){
-                npages++;
-        }
-
-        // call vmmap_map
-        if((err = vmmap_map(curproc->p_vmmap, vn, lopage, npages, prot, flags, off, VMMAP_DIR_HILO, &new)) < 0){
-                if(file != NULL){
-                        fput(file);
-                }
-                return err;
-        }
-
-        // set ret
-        *ret = PN_TO_ADDR(new->vma_start);
-
-        // remember to clear the TLB, and close file
-        tlb_flush_all();
-        if(file != NULL){
-                fput(file);
-        }
-
-        // page table must be valid after a memory segment is mapped into the address space
-        KASSERT(NULL != curproc->p_pagedir);
-
-        return 0;
+        NOT_YET_IMPLEMENTED("VM: do_mmap");
+        return -1;
 }
-
 
 /*
  * This function implements the munmap(2) syscall.
@@ -116,30 +62,8 @@ do_mmap(void *addr, size_t len, int prot, int flags,
  * before calling upon vmmap_remove() to do most of the work.
  * Remember to clear the TLB.
  */
-int
-do_munmap(void *addr, size_t len)
+int do_munmap(void *addr, size_t len)
 {
-        // NOT_YET_IMPLEMENTED("VM: do_munmap");
-
-        // do some error checking
-        // err. addr should be page aligned
-        if(!PAGE_ALIGNED(addr)){
-                return -EINVAL;
-        }
-        // err. the endaddr should not exceed user space, and len should be greater than 0
-        if((uint32_t)addr + len > USER_MEM_HIGH || (uint32_t)addr + len < USER_MEM_LOW || len == 0 || len > USER_MEM_HIGH){
-                return -EINVAL;
-        }
-
-        // calculate npages
-        uint32_t npages = len / PAGE_SIZE + ((len % PAGE_SIZE == 0) ? 0 : 1);
-
-        // call vmmap_remove()
-        vmmap_remove(curproc->p_vmmap, ADDR_TO_PN(addr), npages);
-
-        // remember to clear the TLB
-        tlb_flush_all();
-
-        return 0;
+        NOT_YET_IMPLEMENTED("VM: do_munmap");
+        return -1;
 }
-

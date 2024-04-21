@@ -30,10 +30,11 @@
 
 #include "api/binfmt.h"
 
-struct binfmt {
-        const char        *bf_id;
+struct binfmt
+{
+        const char *bf_id;
         binfmt_load_func_t bf_load;
-        list_link_t        bf_link;
+        list_link_t bf_link;
 };
 
 static list_t binfmt_list;
@@ -47,7 +48,8 @@ init_func(binfmt_init);
 int binfmt_add(const char *id, binfmt_load_func_t loadfunc)
 {
         struct binfmt *fmt;
-        if (NULL == (fmt = kmalloc(sizeof(*fmt)))) {
+        if (NULL == (fmt = kmalloc(sizeof(*fmt))))
+        {
                 return -ENOMEM;
         }
 
@@ -62,18 +64,21 @@ int binfmt_add(const char *id, binfmt_load_func_t loadfunc)
 int binfmt_load(const char *filename, char *const *argv, char *const *envp, uint32_t *eip, uint32_t *esp)
 {
         int err, fd = -1;
-        if (0 > (fd = do_open(filename, O_RDONLY))) {
+        if (0 > (fd = do_open(filename, O_RDONLY)))
+        {
                 dbg(DBG_EXEC, "ERROR: exec failed to open file %s\n", filename);
                 return fd;
         }
 
         file_t *file = fget(fd);
         KASSERT(NULL != file);
-        if (S_ISDIR(file->f_vnode->vn_mode)) {
+        if (S_ISDIR(file->f_vnode->vn_mode))
+        {
                 err = -EISDIR;
                 goto cleanup;
         }
-        if (!S_ISREG(file->f_vnode->vn_mode)) {
+        if (!S_ISREG(file->f_vnode->vn_mode))
+        {
                 err = -EACCES;
                 goto cleanup;
         }
@@ -81,7 +86,8 @@ int binfmt_load(const char *filename, char *const *argv, char *const *envp, uint
         file = NULL;
 
         struct binfmt *fmt;
-        list_iterate_begin(&binfmt_list, fmt, struct binfmt, bf_link) {
+        list_iterate_begin(&binfmt_list, fmt, struct binfmt, bf_link)
+        {
                 dbg(DBG_EXEC, "Trying to exec %s using binary loader %s\n", filename, fmt->bf_id);
 
                 /* ENOEXE indicates that the given loader is unable to load
@@ -89,16 +95,20 @@ int binfmt_load(const char *filename, char *const *argv, char *const *envp, uint
                  * was recognized, but some other error existed which should
                  * be returned to the user, only if all loaders specify ENOEXEC
                  * do we actually return ENOEXEC */
-                if (-ENOEXEC != (err = fmt->bf_load(filename, fd, argv, envp, eip, esp))) {
+                if (-ENOEXEC != (err = fmt->bf_load(filename, fd, argv, envp, eip, esp)))
+                {
                         goto cleanup;
                 }
-        } list_iterate_end();
+        }
+        list_iterate_end();
 
 cleanup:
-        if (NULL != file) {
+        if (NULL != file)
+        {
                 fput(file);
         }
-        if (0 <= fd) {
+        if (0 <= fd)
+        {
                 do_close(fd);
         }
         return err;

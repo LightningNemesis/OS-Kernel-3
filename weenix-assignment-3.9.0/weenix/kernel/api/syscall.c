@@ -1,3 +1,20 @@
+/******************************************************************************/
+/* Important Spring 2024 CSCI 402 usage information:                          */
+/*                                                                            */
+/* This fils is part of CSCI 402 kernel programming assignments at USC.       */
+/*         53616c7465645f5fd1e93dbf35cbffa3aef28f8c01d8cf2ffc51ef62b26a       */
+/*         f9bda5a68e5ed8c972b17bab0f42e24b19daa7bd408305b1f7bd6c7208c1       */
+/*         0e36230e913039b3046dd5fd0ba706a624d33dbaa4d6aab02c82fe09f561       */
+/*         01b0fd977b0051f0b0ce0c69f7db857b1b5e007be2db6d42894bf93de848       */
+/*         806d9152bd5715e9                                                   */
+/* Please understand that you are NOT permitted to distribute or publically   */
+/*         display a copy of this file (or ANY PART of it) for any reason.    */
+/* If anyone (including your prospective employer) asks you to post the code, */
+/*         you must inform them that you do NOT have permissions to do so.    */
+/* You are also NOT permitted to remove or alter this comment block.          */
+/* If this comment block is removed or altered in a submitted file, 20 points */
+/*         will be deducted.                                                  */
+/******************************************************************************/
 
 #include "kernel.h"
 #include "globals.h"
@@ -57,43 +74,8 @@ init_func(syscall_init);
 static int
 sys_read(read_args_t *arg)
 {
-        // NOT_YET_IMPLEMENTED("VM: sys_read");
-
-        read_args_t kern_args;
-        int readbytes;
-        int err;
-
-        // copy_from_user() the read_args_t
-        err = copy_from_user(&kern_args, arg, sizeof(read_args_t));
-        if (err < 0) {
-                curthr->kt_errno = -err;
-                return -1;
-        }
-
-        // page_alloc() a temporary buffer
-        kern_args.buf = page_alloc();
-
-        // call do_read()
-        if((readbytes = do_read(kern_args.fd, kern_args.buf, kern_args.nbytes)) < 0){
-                // if read fails, we should page_free() buffer here
-                page_free(kern_args.buf);
-                curthr->kt_errno = -readbytes;
-                return -1;
-        }
-
-        // copy_to_user() the read bytes
-        err = copy_to_user(arg->buf, kern_args.buf, readbytes);
-        if (err < 0) {
-                // maybe not reachable
-                page_free(kern_args.buf);
-                curthr->kt_errno = -err;
-                return -1;
-        }
-
-        // page_free() your buffer
-        page_free(kern_args.buf);
-
-        return readbytes;
+        NOT_YET_IMPLEMENTED("VM: sys_read");
+        return -1;
 }
 
 /*
@@ -102,42 +84,8 @@ sys_read(read_args_t *arg)
 static int
 sys_write(write_args_t *arg)
 {
-        // NOT_YET_IMPLEMENTED("VM: sys_write");
-
-        write_args_t kern_args;
-        int writebytes;
-        int err;
-
-        // copy_from_user() the write_args_t
-        copy_from_user(&kern_args, arg, sizeof(write_args_t));
-        if ((err = copy_from_user(&kern_args, arg, sizeof(write_args_t))) < 0) {
-                curthr->kt_errno = -err;
-                return -1;
-        }
-
-        // page_alloc() a temporary buffer
-        kern_args.buf = page_alloc();
-
-        // copy the buffer from user to kernel
-        copy_from_user(kern_args.buf, arg->buf, arg->nbytes);
-        if ((err =  copy_from_user(kern_args.buf, arg->buf, arg->nbytes)) < 0) {
-                page_free(kern_args.buf);
-                curthr->kt_errno = -err;
-                return -1;
-        }
-
-        // call do_write()
-        if((writebytes = do_write(kern_args.fd, kern_args.buf, kern_args.nbytes)) < 0){
-                // if write fails, we should page_free() buffer here
-                page_free(kern_args.buf);
-                curthr->kt_errno = -writebytes;
-                return -1;
-        }
-
-        // page_free() your buffer
-        page_free(kern_args.buf);
-
-        return writebytes;
+        NOT_YET_IMPLEMENTED("VM: sys_write");
+        return -1;
 }
 
 /*
@@ -152,53 +100,8 @@ sys_write(write_args_t *arg)
 static int
 sys_getdents(getdents_args_t *arg)
 {
-        // NOT_YET_IMPLEMENTED("VM: sys_getdents");
-
-        getdents_args_t kern_args;
-        uint32_t bytes = 0;
-        int err;
-
-        // copy_from_user() the getdents_args_t
-        if ((err = copy_from_user(&kern_args, arg, sizeof(getdents_args_t))) < 0) {
-                curthr->kt_errno = -err;
-                return -1;
-        }
-
-        // kmalloc() a temporary dirent_t
-        kern_args.dirp = kmalloc(sizeof(dirent_t));
-
-        // we need another pointer to restore the current position in *dirent_t
-        dirent_t *user_dirp_tail = arg->dirp;
-
-        // call do_getdent in a loop
-        while(bytes < kern_args.count){
-                int readByteSize = do_getdent(kern_args.fd, kern_args.dirp);
-                // do_getdent() fails
-                if(readByteSize < 0){
-                        // we should free() the dirent_t here
-                        kfree(kern_args.dirp);
-                        curthr->kt_errno = -readByteSize;
-                        return -1;
-                }
-                // f_pos has reached maximum, simply break here
-                if(readByteSize == 0){
-                        break;
-                }
-
-                // if we have actually read something, copy it to user_dirp_tail and increase its position
-                if((err = copy_to_user(user_dirp_tail, kern_args.dirp, sizeof(dirent_t))) < 0){
-                        kfree(kern_args.dirp);
-                        curthr->kt_errno = -err;
-                        return -1;
-                }
-                user_dirp_tail++;
-                bytes += sizeof(dirent_t);
-        }
-
-        // free() the dirent_t
-        kfree(kern_args.dirp);
-
-        return bytes;
+        NOT_YET_IMPLEMENTED("VM: sys_getdents");
+        return -1;
 }
 
 #ifdef __MOUNTING__
@@ -210,19 +113,22 @@ static int sys_mount(mount_args_t *arg)
         char *type;
         int ret;
 
-        if (copy_from_user(&kern_args, arg, sizeof(kern_args)) < 0) {
+        if (copy_from_user(&kern_args, arg, sizeof(kern_args)) < 0)
+        {
                 curthr->kt_errno = EFAULT;
                 return -1;
         }
 
         /* null is okay only for the source */
         source = user_strdup(&kern_args.spec);
-        if (NULL == (target = user_strdup(&kern_args.dir))) {
+        if (NULL == (target = user_strdup(&kern_args.dir)))
+        {
                 kfree(source);
                 curthr->kt_errno = EINVAL;
                 return -1;
         }
-        if (NULL == (type = user_strdup(&kern_args.fstype))) {
+        if (NULL == (type = user_strdup(&kern_args.fstype)))
+        {
                 kfree(source);
                 kfree(target);
                 curthr->kt_errno = EINVAL;
@@ -234,7 +140,8 @@ static int sys_mount(mount_args_t *arg)
         kfree(target);
         kfree(type);
 
-        if (ret) {
+        if (ret)
+        {
                 curthr->kt_errno = -ret;
                 return -1;
         }
@@ -248,12 +155,14 @@ static int sys_umount(argstr_t *input)
         char *target;
         int ret;
 
-        if (copy_from_user(&kstr, input, sizeof(kstr)) < 0) {
+        if (copy_from_user(&kstr, input, sizeof(kstr)) < 0)
+        {
                 curthr->kt_errno = EFAULT;
                 return -1;
         }
 
-        if (NULL == (target = user_strdup(&kstr))) {
+        if (NULL == (target = user_strdup(&kstr)))
+        {
                 curthr->kt_errno = EINVAL;
                 return -1;
         }
@@ -261,7 +170,8 @@ static int sys_umount(argstr_t *input)
         ret = do_umount(target);
         kfree(target);
 
-        if (ret) {
+        if (ret)
+        {
                 curthr->kt_errno = -ret;
                 return -1;
         }
@@ -275,133 +185,161 @@ static int sys_close(int fd)
         int err;
 
         err = do_close(fd);
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
-        } else return err;
+        }
+        else
+                return err;
 }
 
 static int sys_dup(int fd)
 {
         int err;
 
-        if ((err = do_dup(fd)) < 0) {
+        if ((err = do_dup(fd)) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
-        } else return err;
+        }
+        else
+                return err;
 }
 
 static int sys_dup2(const dup2_args_t *arg)
 {
-        dup2_args_t             kern_args;
-        int                     err;
+        dup2_args_t kern_args;
+        int err;
 
-        if ((err = copy_from_user(&kern_args, arg, sizeof(kern_args))) < 0) {
+        if ((err = copy_from_user(&kern_args, arg, sizeof(kern_args))) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
 
-        if ((err = do_dup2(kern_args.ofd, kern_args.nfd)) < 0) {
+        if ((err = do_dup2(kern_args.ofd, kern_args.nfd)) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
-        } else return err;
+        }
+        else
+                return err;
 }
 
 static int sys_mkdir(mkdir_args_t *arg)
 {
-        mkdir_args_t            kern_args;
-        char                   *path;
-        int                     err;
+        mkdir_args_t kern_args;
+        char *path;
+        int err;
 
-        if ((err = copy_from_user(&kern_args, arg, sizeof(mkdir_args_t))) < 0) {
+        if ((err = copy_from_user(&kern_args, arg, sizeof(mkdir_args_t))) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
 
         path = user_strdup(&kern_args.path);
-        if (!path) {
+        if (!path)
+        {
                 curthr->kt_errno = EINVAL;
                 return -1;
         }
 
         err = do_mkdir(path);
         kfree(path);
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
-        } else return err;
+        }
+        else
+                return err;
 }
 
 static int sys_rmdir(argstr_t *arg)
 {
-        argstr_t                kern_args;
-        char                   *path;
-        int                     err;
+        argstr_t kern_args;
+        char *path;
+        int err;
 
-        if ((err = copy_from_user(&kern_args, arg, sizeof(argstr_t))) < 0) {
+        if ((err = copy_from_user(&kern_args, arg, sizeof(argstr_t))) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
         path = user_strdup(&kern_args);
 
-        if (!path) {
+        if (!path)
+        {
                 curthr->kt_errno = EINVAL;
                 return -1;
         }
 
         err = do_rmdir(path);
         kfree(path);
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
-        } else return err;
+        }
+        else
+                return err;
 }
 
 static int sys_unlink(argstr_t *arg)
 {
-        argstr_t                kern_args;
-        char                    *path;
-        int                     err;
+        argstr_t kern_args;
+        char *path;
+        int err;
 
-        if ((err = copy_from_user(&kern_args, arg, sizeof(argstr_t))) < 0) {
+        if ((err = copy_from_user(&kern_args, arg, sizeof(argstr_t))) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
 
         path = user_strdup(&kern_args);
-        if (!path) {
+        if (!path)
+        {
                 curthr->kt_errno = EINVAL;
                 return -1;
         }
 
         err = do_unlink(path);
         kfree(path);
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
-        } else return err;
+        }
+        else
+                return err;
 }
 
 static int sys_link(link_args_t *arg)
 {
-        link_args_t             kern_args;
-        char                    *to;
-        char                    *from;
-        int                     err;
+        link_args_t kern_args;
+        char *to;
+        char *from;
+        int err;
 
-        if ((err = copy_from_user(&kern_args, arg, sizeof(link_args_t))) < 0) {
+        if ((err = copy_from_user(&kern_args, arg, sizeof(link_args_t))) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
 
         to = user_strdup(&kern_args.to);
-        if (!to) {
+        if (!to)
+        {
                 curthr->kt_errno = EINVAL;
                 return -1;
         }
 
         from = user_strdup(&kern_args.from);
-        if (!from) {
+        if (!from)
+        {
                 curthr->kt_errno = EINVAL;
                 kfree(to);
                 return -1;
@@ -411,34 +349,40 @@ static int sys_link(link_args_t *arg)
         kfree(to);
         kfree(from);
 
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
-        } else {
+        }
+        else
+        {
                 return err;
         }
 }
 
 static int sys_rename(rename_args_t *arg)
 {
-        rename_args_t           kern_args;
-        char                    *oldname;
-        char                    *newname;
-        int                     err;
+        rename_args_t kern_args;
+        char *oldname;
+        char *newname;
+        int err;
 
-        if ((err = copy_from_user(&kern_args, arg, sizeof(rename_args_t))) < 0) {
+        if ((err = copy_from_user(&kern_args, arg, sizeof(rename_args_t))) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
 
         oldname = user_strdup(&kern_args.oldname);
-        if (!oldname) {
+        if (!oldname)
+        {
                 curthr->kt_errno = EINVAL;
                 return -1;
         }
 
         newname = user_strdup(&kern_args.newname);
-        if (!newname) {
+        if (!newname)
+        {
                 curthr->kt_errno = EINVAL;
                 kfree(oldname);
                 return -1;
@@ -448,25 +392,30 @@ static int sys_rename(rename_args_t *arg)
         kfree(newname);
         kfree(oldname);
 
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
-        } else return err;
+        }
+        else
+                return err;
 }
 
 static int sys_chdir(argstr_t *arg)
 {
-        argstr_t        kern_args;
-        char            *path;
-        int             err;
+        argstr_t kern_args;
+        char *path;
+        int err;
 
-        if ((err = copy_from_user(&kern_args, arg, sizeof(argstr_t))) < 0) {
+        if ((err = copy_from_user(&kern_args, arg, sizeof(argstr_t))) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
 
         path = user_strdup(&kern_args);
-        if (!path) {
+        if (!path)
+        {
                 curthr->kt_errno = EINVAL;
                 return -1;
         }
@@ -474,67 +423,81 @@ static int sys_chdir(argstr_t *arg)
         err = do_chdir(path);
         kfree(path);
 
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
-        } else return err;
+        }
+        else
+                return err;
 }
 
 static int sys_lseek(lseek_args_t *args)
 {
-        lseek_args_t            kargs;
-        int                     err;
+        lseek_args_t kargs;
+        int err;
 
-        if ((err = copy_from_user(&kargs, args, sizeof(lseek_args_t))) < 0) {
+        if ((err = copy_from_user(&kargs, args, sizeof(lseek_args_t))) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
 
         err = do_lseek(kargs.fd, kargs.offset, kargs.whence);
 
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
-        } else return err;
+        }
+        else
+                return err;
 }
 
 static int sys_open(open_args_t *arg)
 {
-        open_args_t             kern_args;
-        char                    *path;
-        int                     err;
+        open_args_t kern_args;
+        char *path;
+        int err;
 
-        if ((err = copy_from_user(&kern_args, arg, sizeof(open_args_t))) < 0) {
+        if ((err = copy_from_user(&kern_args, arg, sizeof(open_args_t))) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
 
         path = user_strdup(&kern_args.filename);
-        if (!path) {
+        if (!path)
+        {
                 curthr->kt_errno = EINVAL;
                 return -1;
         }
 
         err = do_open(path, kern_args.flags);
         kfree(path);
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
-        } else return err;
+        }
+        else
+                return err;
 }
 
 static int sys_munmap(munmap_args_t *args)
 {
-        munmap_args_t           kargs;
-        int                     err;
+        munmap_args_t kargs;
+        int err;
 
-        if (copy_from_user(&kargs, args, sizeof(munmap_args_t))) {
+        if (copy_from_user(&kargs, args, sizeof(munmap_args_t)))
+        {
                 curthr->kt_errno = EFAULT;
                 return -1;
         }
 
         err = do_munmap(kargs.addr, kargs.len);
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
@@ -543,41 +506,45 @@ static int sys_munmap(munmap_args_t *args)
 
 static void *sys_mmap(mmap_args_t *arg)
 {
-        mmap_args_t             kargs;
-        void                    *ret;
-        int                     err;
+        mmap_args_t kargs;
+        void *ret;
+        int err;
 
-        if (copy_from_user(&kargs, arg, sizeof(mmap_args_t)) < 0) {
+        if (copy_from_user(&kargs, arg, sizeof(mmap_args_t)) < 0)
+        {
                 curthr->kt_errno = EFAULT;
                 return MAP_FAILED;
         }
 
         err = do_mmap(kargs.mma_addr, kargs.mma_len, kargs.mma_prot,
                       kargs.mma_flags, kargs.mma_fd, kargs.mma_off, &ret);
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return MAP_FAILED;
         }
         return ret;
 }
 
-
 static pid_t sys_waitpid(waitpid_args_t *args)
 {
         int s, p;
         waitpid_args_t kargs;
 
-        if (0 > copy_from_user(&kargs, args, sizeof(kargs))) {
+        if (0 > copy_from_user(&kargs, args, sizeof(kargs)))
+        {
                 curthr->kt_errno = EFAULT;
                 return -1;
         }
 
-        if (0 > (p = do_waitpid(kargs.wpa_pid, kargs.wpa_options, &s))) {
+        if (0 > (p = do_waitpid(kargs.wpa_pid, kargs.wpa_options, &s)))
+        {
                 curthr->kt_errno = -p;
                 return -1;
         }
 
-        if (NULL != kargs.wpa_status && 0 > copy_to_user(kargs.wpa_status, &s, sizeof(int))) {
+        if (NULL != kargs.wpa_status && 0 > copy_to_user(kargs.wpa_status, &s, sizeof(int)))
+        {
                 curthr->kt_errno = EFAULT;
                 return -1;
         }
@@ -590,11 +557,14 @@ static void *sys_brk(void *addr)
         void *ret;
         int err;
 
-        if (0 == (err = do_brk(addr, &ret))) {
+        if (0 == (err = do_brk(addr, &ret)))
+        {
                 return ret;
-        } else {
+        }
+        else
+        {
                 curthr->kt_errno = -err;
-                return (void *) - 1;
+                return (void *)-1;
         }
 }
 
@@ -615,23 +585,27 @@ static int sys_stat(stat_args_t *arg)
         char *path;
         int ret;
 
-        if (copy_from_user(&kern_args, arg, sizeof(kern_args)) < 0) {
+        if (copy_from_user(&kern_args, arg, sizeof(kern_args)) < 0)
+        {
                 curthr->kt_errno = EFAULT;
                 return -1;
         }
 
-        if ((path = user_strdup(&kern_args.path)) == NULL) {
+        if ((path = user_strdup(&kern_args.path)) == NULL)
+        {
                 curthr->kt_errno = EINVAL;
                 return -1;
         }
 
         ret = do_stat(path, &buf);
 
-        if (ret == 0) {
+        if (ret == 0)
+        {
                 ret = copy_to_user(kern_args.buf, &buf, sizeof(struct stat));
         }
 
-        if (ret != 0) {
+        if (ret != 0)
+        {
                 kfree(path);
                 curthr->kt_errno = -ret;
                 return -1;
@@ -648,11 +622,13 @@ static int sys_pipe(int arg[2])
 
         ret = do_pipe(kern_args);
 
-        if (ret == 0) {
+        if (ret == 0)
+        {
                 ret = copy_to_user(arg, kern_args, sizeof(kern_args));
         }
 
-        if (ret != 0) {
+        if (ret != 0)
+        {
                 curthr->kt_errno = -ret;
                 return -1;
         }
@@ -671,23 +647,28 @@ static int sys_uname(struct utsname *arg)
         int ret = 0;
 
         ret = copy_to_user(arg->sysname, sysname, sizeof(sysname));
-        if (ret != 0) {
+        if (ret != 0)
+        {
                 goto err;
         }
         ret = copy_to_user(arg->release, release, sizeof(release));
-        if (ret != 0) {
+        if (ret != 0)
+        {
                 goto err;
         }
         ret = copy_to_user(arg->version, version, sizeof(version));
-        if (ret != 0) {
+        if (ret != 0)
+        {
                 goto err;
         }
         ret = copy_to_user(arg->nodename, nodename, sizeof(nodename));
-        if (ret != 0) {
+        if (ret != 0)
+        {
                 goto err;
         }
         ret = copy_to_user(arg->machine, machine, sizeof(machine));
-        if (ret != 0) {
+        if (ret != 0)
+        {
                 goto err;
         }
         return 0;
@@ -699,7 +680,8 @@ err:
 static int sys_fork(regs_t *regs)
 {
         int ret = do_fork(regs);
-        if (ret < 0) {
+        if (ret < 0)
+        {
                 curthr->kt_errno = -ret;
                 return -1;
         }
@@ -722,7 +704,8 @@ static int sys_execve(execve_args_t *args, regs_t *regs)
         char **kern_envp = NULL;
         int err;
 
-        if ((err = copy_from_user(&kern_args, args, sizeof(kern_args))) < 0) {
+        if ((err = copy_from_user(&kern_args, args, sizeof(kern_args))) < 0)
+        {
                 curthr->kt_errno = -err;
                 goto cleanup;
         }
@@ -732,13 +715,15 @@ static int sys_execve(execve_args_t *args, regs_t *regs)
                 goto cleanup;
 
         /* copy the argument list */
-        if (kern_args.argv.av_vec) {
+        if (kern_args.argv.av_vec)
+        {
                 if ((kern_argv = user_vecdup(&kern_args.argv)) == NULL)
                         goto cleanup;
         }
 
         /* copy the environment list */
-        if (kern_args.envp.av_vec) {
+        if (kern_args.envp.av_vec)
+        {
                 if ((kern_envp = user_vecdup(&kern_args.envp)) == NULL)
                         goto cleanup;
         }
@@ -762,10 +747,11 @@ cleanup:
 static int sys_debug(argstr_t *arg)
 {
         argstr_t kern_args;
-        int      err;
-        char    *message;
+        int err;
+        char *message;
 
-        if ((err = copy_from_user(&kern_args, arg, sizeof(argstr_t))) < 0) {
+        if ((err = copy_from_user(&kern_args, arg, sizeof(argstr_t))) < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
@@ -779,18 +765,21 @@ static int sys_debug(argstr_t *arg)
 static int sys_kshell(int ttyid)
 {
         kshell_t *ksh;
-        int       err;
+        int err;
 
         /* Create a kshell on tty */
         ksh = kshell_create(ttyid);
-        if (NULL == ksh) {
+        if (NULL == ksh)
+        {
                 curthr->kt_errno = ENODEV;
                 return -1;
         }
 
-        while ((err = kshell_execute_next(ksh)) > 0);
+        while ((err = kshell_execute_next(ksh)) > 0)
+                ;
         kshell_destroy(ksh);
-        if (err < 0) {
+        if (err < 0)
+        {
                 curthr->kt_errno = -err;
                 return -1;
         }
@@ -804,15 +793,17 @@ static void syscall_handler(regs_t *regs)
 
         /* The syscall number and the (user-address) pointer to the arguments.
          * Pushed by userland when we trap into the kernel */
-        uint32_t sysnum = (uint32_t) regs->r_eax;
-        uint32_t args = (uint32_t) regs->r_edx;
+        uint32_t sysnum = (uint32_t)regs->r_eax;
+        uint32_t args = (uint32_t)regs->r_edx;
 
         dbg(DBG_SYSCALL, ">> pid %d, sysnum: %d (%x), arg: %d (%#08x)\n",
             curproc->p_pid, sysnum, sysnum, args, args);
 
-        if (curthr->kt_cancelled) {
+        if (curthr->kt_cancelled)
+        {
                 dbg(DBG_SYSCALL, "trap: CANCELLING: thread %p of proc %d "
-                    "(0x%p)\n", curthr, curproc->p_pid, curproc);
+                                 "(0x%p)\n",
+                    curthr, curproc->p_pid, curproc);
 
                 kthread_exit(curthr->kt_retval);
         }
@@ -821,9 +812,11 @@ static void syscall_handler(regs_t *regs)
 
         int ret = syscall_dispatch(sysnum, args, regs);
 
-        if (curthr->kt_cancelled) {
+        if (curthr->kt_cancelled)
+        {
                 dbg(DBG_SYSCALL, "trap: CANCELLING: thread %p of proc %d "
-                    "(%p)\n", curthr, curproc->p_pid, curproc);
+                                 "(%p)\n",
+                    curthr, curproc->p_pid, curproc);
 
                 kthread_exit(curthr->kt_retval);
         }
@@ -835,125 +828,125 @@ static void syscall_handler(regs_t *regs)
 
 static int syscall_dispatch(uint32_t sysnum, uint32_t args, regs_t *regs)
 {
-        switch (sysnum) {
-                case SYS_waitpid:
-                        return sys_waitpid((waitpid_args_t *)args);
+        switch (sysnum)
+        {
+        case SYS_waitpid:
+                return sys_waitpid((waitpid_args_t *)args);
 
-                case SYS_exit:
-                        do_exit((int)args);
-                        panic("exit failed!\n");
-                        return 0;
+        case SYS_exit:
+                do_exit((int)args);
+                panic("exit failed!\n");
+                return 0;
 
-                case SYS_thr_exit:
-                        kthread_exit((void *)args);
-                        panic("thr_exit failed!\n");
-                        return 0;
+        case SYS_thr_exit:
+                kthread_exit((void *)args);
+                panic("thr_exit failed!\n");
+                return 0;
 
-                case SYS_thr_yield:
-                        sched_make_runnable(curthr);
-                        sched_switch();
-                        return 0;
+        case SYS_thr_yield:
+                sched_make_runnable(curthr);
+                sched_switch();
+                return 0;
 
-                case SYS_fork:
-                        return sys_fork(regs);
+        case SYS_fork:
+                return sys_fork(regs);
 
-                case SYS_getpid:
-                        return curproc->p_pid;
+        case SYS_getpid:
+                return curproc->p_pid;
 
-                case SYS_sync:
-                        sys_sync();
-                        return 0;
+        case SYS_sync:
+                sys_sync();
+                return 0;
 
 #ifdef __MOUNTING__
-                case SYS_mount:
-                        return sys_mount((mount_args_t *) args);
+        case SYS_mount:
+                return sys_mount((mount_args_t *)args);
 
-                case SYS_umount:
-                        return sys_umount((argstr_t *) args);
+        case SYS_umount:
+                return sys_umount((argstr_t *)args);
 #endif
 
-                case SYS_mmap:
-                        return (int) sys_mmap((mmap_args_t *) args);
+        case SYS_mmap:
+                return (int)sys_mmap((mmap_args_t *)args);
 
-                case SYS_munmap:
-                        return sys_munmap((munmap_args_t *) args);
+        case SYS_munmap:
+                return sys_munmap((munmap_args_t *)args);
 
-                case SYS_open:
-                        return sys_open((open_args_t *) args);
+        case SYS_open:
+                return sys_open((open_args_t *)args);
 
-                case SYS_close:
-                        return sys_close((int)args);
+        case SYS_close:
+                return sys_close((int)args);
 
-                case SYS_read:
-                        return sys_read((read_args_t *)args);
+        case SYS_read:
+                return sys_read((read_args_t *)args);
 
-                case SYS_write:
-                        return sys_write((write_args_t *)args);
+        case SYS_write:
+                return sys_write((write_args_t *)args);
 
-                case SYS_dup:
-                        return sys_dup((int)args);
+        case SYS_dup:
+                return sys_dup((int)args);
 
-                case SYS_dup2:
-                        return sys_dup2((dup2_args_t *)args);
+        case SYS_dup2:
+                return sys_dup2((dup2_args_t *)args);
 
-                case SYS_mkdir:
-                        return sys_mkdir((mkdir_args_t *)args);
+        case SYS_mkdir:
+                return sys_mkdir((mkdir_args_t *)args);
 
-                case SYS_rmdir:
-                        return sys_rmdir((argstr_t *)args);
+        case SYS_rmdir:
+                return sys_rmdir((argstr_t *)args);
 
-                case SYS_unlink:
-                        return sys_unlink((argstr_t *)args);
+        case SYS_unlink:
+                return sys_unlink((argstr_t *)args);
 
-                case SYS_link:
-                        return sys_link((link_args_t *)args);
+        case SYS_link:
+                return sys_link((link_args_t *)args);
 
-                case SYS_rename:
-                        return sys_rename((rename_args_t *)args);
+        case SYS_rename:
+                return sys_rename((rename_args_t *)args);
 
-                case SYS_chdir:
-                        return sys_chdir((argstr_t *)args);
+        case SYS_chdir:
+                return sys_chdir((argstr_t *)args);
 
-                case SYS_getdents:
-                        return sys_getdents((getdents_args_t *)args);
+        case SYS_getdents:
+                return sys_getdents((getdents_args_t *)args);
 
-                case SYS_brk:
-                        return (int) sys_brk((void *)args);
+        case SYS_brk:
+                return (int)sys_brk((void *)args);
 
-                case SYS_lseek:
-                        return sys_lseek((lseek_args_t *)args);
+        case SYS_lseek:
+                return sys_lseek((lseek_args_t *)args);
 
-                case SYS_halt:
-                        sys_halt();
-                        return -1;
+        case SYS_halt:
+                sys_halt();
+                return -1;
 
-                case SYS_set_errno:
-                        curthr->kt_errno = (int)args;
-                        return 0;
+        case SYS_set_errno:
+                curthr->kt_errno = (int)args;
+                return 0;
 
-                case SYS_errno:
-                        return curthr->kt_errno;
+        case SYS_errno:
+                return curthr->kt_errno;
 
-                case SYS_execve:
-                        return sys_execve((execve_args_t *)args, regs);
+        case SYS_execve:
+                return sys_execve((execve_args_t *)args, regs);
 
-                case SYS_stat:
-                        return sys_stat((stat_args_t *)args);
+        case SYS_stat:
+                return sys_stat((stat_args_t *)args);
 
-                case SYS_pipe:
-                        return sys_pipe((int *)args);
+        case SYS_pipe:
+                return sys_pipe((int *)args);
 
-                case SYS_uname:
-                        return sys_uname((struct utsname *)args);
+        case SYS_uname:
+                return sys_uname((struct utsname *)args);
 
-                case SYS_debug:
-                        return sys_debug((argstr_t *)args);
-                case SYS_kshell:
-                        return sys_kshell((int)args);
-                default:
-                        dbg(DBG_ERROR, "ERROR: unknown system call: %d (args: %#08x)\n", sysnum, args);
-                        curthr->kt_errno = ENOSYS;
-                        return -1;
+        case SYS_debug:
+                return sys_debug((argstr_t *)args);
+        case SYS_kshell:
+                return sys_kshell((int)args);
+        default:
+                dbg(DBG_ERROR, "ERROR: unknown system call: %d (args: %#08x)\n", sysnum, args);
+                curthr->kt_errno = ENOSYS;
+                return -1;
         }
 }
-

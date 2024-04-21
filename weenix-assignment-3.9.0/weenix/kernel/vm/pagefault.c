@@ -1,3 +1,20 @@
+/******************************************************************************/
+/* Important Spring 2024 CSCI 402 usage information:                          */
+/*                                                                            */
+/* This fils is part of CSCI 402 kernel programming assignments at USC.       */
+/*         53616c7465645f5fd1e93dbf35cbffa3aef28f8c01d8cf2ffc51ef62b26a       */
+/*         f9bda5a68e5ed8c972b17bab0f42e24b19daa7bd408305b1f7bd6c7208c1       */
+/*         0e36230e913039b3046dd5fd0ba706a624d33dbaa4d6aab02c82fe09f561       */
+/*         01b0fd977b0051f0b0ce0c69f7db857b1b5e007be2db6d42894bf93de848       */
+/*         806d9152bd5715e9                                                   */
+/* Please understand that you are NOT permitted to distribute or publically   */
+/*         display a copy of this file (or ANY PART of it) for any reason.    */
+/* If anyone (including your prospective employer) asks you to post the code, */
+/*         you must inform them that you do NOT have permissions to do so.    */
+/* You are also NOT permitted to remove or alter this comment block.          */
+/* If this comment block is removed or altered in a submitted file, 20 points */
+/*         will be deducted.                                                  */
+/******************************************************************************/
 
 #include "types.h"
 #include "globals.h"
@@ -14,7 +31,6 @@
 #include "mm/mmobj.h"
 #include "mm/pframe.h"
 #include "mm/pagetable.h"
-#include "mm/tlb.h"
 
 #include "vm/pagefault.h"
 #include "vm/vmmap.h"
@@ -50,73 +66,7 @@
  *              address which caused the fault, possible values
  *              can be found in pagefault.h
  */
-void
-handle_pagefault(uintptr_t vaddr, uint32_t cause)
+void handle_pagefault(uintptr_t vaddr, uint32_t cause)
 {
-        // NOT_YET_IMPLEMENTED("VM: handle_pagefault");
-
-        // find pageFaultVmArea
-        vmarea_t* pageFaultVmArea = vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(vaddr));
-        // check pageFaultVmArea
-        if(NULL == pageFaultVmArea){
-                do_exit(EFAULT);
-        }
-
-        // check permission
-        int needRead = !(cause & FAULT_WRITE || cause & FAULT_EXEC);
-        int needWrite = cause & FAULT_WRITE;
-        int needExec = cause & FAULT_EXEC;
-        if(needRead){
-                if(!(pageFaultVmArea->vma_prot & PROT_READ)){
-                        do_exit(EFAULT);
-                }
-        }
-        if(needWrite){
-                if(!(pageFaultVmArea->vma_prot & PROT_WRITE)){
-                        do_exit(EFAULT);
-                }
-        }
-        if(needExec){
-                if(!(pageFaultVmArea->vma_prot & PROT_EXEC)){
-                        do_exit(EFAULT);
-                }
-        }
-
-        // prepare parameter
-        int forwrite = 0;
-        int ptFlag = PT_PRESENT | PT_USER;
-        int pdFlag = PD_PRESENT | PD_USER;
-        if(needWrite){
-                forwrite = 1;
-                ptFlag |= PT_WRITE;
-                pdFlag |= PD_WRITE;
-        }
-
-        // find pageFaultPageFrame
-        pframe_t* pageFaultPageFrame = NULL;
-        int code = pframe_lookup(pageFaultVmArea->vma_obj, ADDR_TO_PN(vaddr) - pageFaultVmArea->vma_start + pageFaultVmArea->vma_off, forwrite, &pageFaultPageFrame);
-        // check pageFaultPageFrame
-        if(code < 0){
-                do_exit(EFAULT);
-        }
-
-        // this page frame must be non-NULL
-        KASSERT(pageFaultPageFrame);
-        // this page frame's pf_addr must be non-NULL
-        KASSERT(pageFaultPageFrame->pf_addr);
-
-        // if it is about to write
-        if(1 == forwrite){
-                // make pageFaultPageFrame dirty
-                pframe_pin(pageFaultPageFrame);
-                pframe_dirty(pageFaultPageFrame);
-                pframe_unpin(pageFaultPageFrame);
-        }
-
-        // get physicalAddress
-        uintptr_t physicalAddress = (uintptr_t) pt_virt_to_phys((uintptr_t) pageFaultPageFrame->pf_addr);
-        // add pageEntry
-        code = pt_map(curproc->p_pagedir, (uintptr_t) PAGE_ALIGN_DOWN(vaddr), physicalAddress, pdFlag, ptFlag);
-        // update pageTable
-        tlb_flush((uintptr_t) PAGE_ALIGN_DOWN(vaddr));
+        NOT_YET_IMPLEMENTED("VM: handle_pagefault");
 }

@@ -40,11 +40,12 @@
 
 #include "boot/config.h"
 
-#define PT_ENTRY_COUNT    (PAGE_SIZE / sizeof (uint32_t))
-#define PT_VADDR_SIZE     (PAGE_SIZE * PT_ENTRY_COUNT)
+#define PT_ENTRY_COUNT (PAGE_SIZE / sizeof(uint32_t))
+#define PT_VADDR_SIZE (PAGE_SIZE * PT_ENTRY_COUNT)
 
-struct pagedir {
-        pde_t      pd_physical[PT_ENTRY_COUNT];
+struct pagedir
+{
+        pde_t pd_physical[PT_ENTRY_COUNT];
         uintptr_t *pd_virtual[PT_ENTRY_COUNT];
 };
 
@@ -86,9 +87,10 @@ pt_phys_perm_map(uintptr_t paddr, uint32_t count)
         KASSERT(phys_map_count < PT_ENTRY_COUNT);
 
         uint32_t i;
-        for (i = 0; i < count; ++i) {
+        for (i = 0; i < count; ++i)
+        {
                 final_page[PT_ENTRY_COUNT - phys_map_count + i] =
-                        (paddr + PAGE_SIZE * i) | PT_PRESENT | PT_WRITE;
+                    (paddr + PAGE_SIZE * i) | PT_PRESENT | PT_WRITE;
         }
 
         uintptr_t vaddr = UPTR_MAX - (PAGE_SIZE * phys_map_count) + 1;
@@ -108,12 +110,11 @@ pt_virt_to_phys(uintptr_t vaddr)
         return page + offset;
 }
 
-void
-pt_set(pagedir_t *pd)
+void pt_set(pagedir_t *pd)
 {
         uintptr_t pdir = pt_virt_to_phys((uintptr_t)pd->pd_physical);
         current_pagedir = pd;
-        __asm__ volatile("movl %0, %%cr3" :: "r"(pdir) : "memory");
+        __asm__ volatile("movl %0, %%cr3" ::"r"(pdir) : "memory");
 }
 
 pagedir_t *
@@ -122,8 +123,7 @@ pt_get(void)
         return current_pagedir;
 }
 
-int
-pt_map(pagedir_t *pd, uintptr_t vaddr, uintptr_t paddr, uint32_t pdflags, uint32_t ptflags)
+int pt_map(pagedir_t *pd, uintptr_t vaddr, uintptr_t paddr, uint32_t pdflags, uint32_t ptflags)
 {
         KASSERT(PAGE_ALIGNED(vaddr) && PAGE_ALIGNED(paddr));
         KASSERT(USER_MEM_LOW <= vaddr && USER_MEM_HIGH > vaddr);
@@ -131,16 +131,22 @@ pt_map(pagedir_t *pd, uintptr_t vaddr, uintptr_t paddr, uint32_t pdflags, uint32
         int index = vaddr_to_pdindex(vaddr);
 
         pte_t *pt;
-        if (!(PT_PRESENT & pd->pd_physical[index])) {
-                if (NULL == (pt = page_alloc())) {
+        if (!(PT_PRESENT & pd->pd_physical[index]))
+        {
+                if (NULL == (pt = page_alloc()))
+                {
                         return -ENOMEM;
-                } else {
+                }
+                else
+                {
                         KASSERT((pdflags & ~PAGE_MASK) == pdflags);
                         memset(pt, 0, PAGE_SIZE);
                         pd->pd_physical[index] = pt_virt_to_phys((uintptr_t)pt) | pdflags;
                         pd->pd_virtual[index] = pt;
                 }
-        } else {
+        }
+        else
+        {
                 /* Be sure to add additional pagedir flags if necessary */
                 pd->pd_physical[index] = pd->pd_physical[index] | pdflags;
                 pt = (pte_t *)pd->pd_virtual[index];
@@ -154,15 +160,15 @@ pt_map(pagedir_t *pd, uintptr_t vaddr, uintptr_t paddr, uint32_t pdflags, uint32
         return 0;
 }
 
-void
-pt_unmap(pagedir_t *pd, uintptr_t vaddr)
+void pt_unmap(pagedir_t *pd, uintptr_t vaddr)
 {
         KASSERT(PAGE_ALIGNED(vaddr));
         KASSERT(USER_MEM_LOW <= vaddr && USER_MEM_HIGH > vaddr);
 
         int index = vaddr_to_pdindex(vaddr);
 
-        if (PT_PRESENT & pd->pd_physical[index]) {
+        if (PT_PRESENT & pd->pd_physical[index])
+        {
                 pte_t *pt = (pte_t *)pd->pd_virtual[index];
 
                 index = vaddr_to_ptindex(vaddr);
@@ -170,8 +176,7 @@ pt_unmap(pagedir_t *pd, uintptr_t vaddr)
         }
 }
 
-void
-pt_unmap_range(pagedir_t *pd, uintptr_t vlow, uintptr_t vhigh)
+void pt_unmap_range(pagedir_t *pd, uintptr_t vlow, uintptr_t vhigh)
 {
         uint32_t index;
 
@@ -180,7 +185,8 @@ pt_unmap_range(pagedir_t *pd, uintptr_t vlow, uintptr_t vhigh)
         KASSERT(USER_MEM_LOW <= vlow && USER_MEM_HIGH >= vhigh);
 
         index = vaddr_to_ptindex(vlow);
-        if (PT_PRESENT & pd->pd_physical[vaddr_to_pdindex(vlow)] && index != 0) {
+        if (PT_PRESENT & pd->pd_physical[vaddr_to_pdindex(vlow)] && index != 0)
+        {
                 pte_t *pt = (pte_t *)pd->pd_virtual[vaddr_to_pdindex(vlow)];
                 size_t size = (PT_ENTRY_COUNT - index) * sizeof(*pt);
                 memset(&pt[index], 0, size);
@@ -188,7 +194,8 @@ pt_unmap_range(pagedir_t *pd, uintptr_t vlow, uintptr_t vhigh)
         vlow += PAGE_SIZE * ((PT_ENTRY_COUNT - index) % PT_ENTRY_COUNT);
 
         index = vaddr_to_ptindex(vhigh);
-        if (PT_PRESENT & pd->pd_physical[vaddr_to_pdindex(vhigh)] && index != 0) {
+        if (PT_PRESENT & pd->pd_physical[vaddr_to_pdindex(vhigh)] && index != 0)
+        {
                 pte_t *pt = (pte_t *)pd->pd_virtual[vaddr_to_pdindex(vhigh)];
                 size_t size = index * sizeof(*pt);
                 memset(&pt[0], 0, size);
@@ -196,8 +203,10 @@ pt_unmap_range(pagedir_t *pd, uintptr_t vlow, uintptr_t vhigh)
         vhigh -= PAGE_SIZE * index;
 
         uint32_t i;
-        for (i = vaddr_to_pdindex(vlow); i < vaddr_to_pdindex(vhigh); ++i) {
-                if (PT_PRESENT & pd->pd_physical[i]) {
+        for (i = vaddr_to_pdindex(vlow); i < vaddr_to_pdindex(vhigh); ++i)
+        {
+                if (PT_PRESENT & pd->pd_physical[i])
+                {
                         page_free(pd->pd_virtual[i]);
                         pd->pd_virtual[i] = NULL;
                         pd->pd_physical[i] = 0;
@@ -205,14 +214,14 @@ pt_unmap_range(pagedir_t *pd, uintptr_t vlow, uintptr_t vhigh)
         }
 }
 
-
 pagedir_t *
 pt_create_pagedir()
 {
         KASSERT(sizeof(pagedir_t) == PAGE_SIZE * 2);
 
         pagedir_t *pdir;
-        if (NULL == (pdir = page_alloc_n(2))) {
+        if (NULL == (pdir = page_alloc_n(2)))
+        {
                 return NULL;
         }
 
@@ -220,8 +229,7 @@ pt_create_pagedir()
         return pdir;
 }
 
-void
-pt_destroy_pagedir(pagedir_t *pdir)
+void pt_destroy_pagedir(pagedir_t *pdir)
 {
         KASSERT(PAGE_ALIGNED(pdir));
 
@@ -230,8 +238,10 @@ pt_destroy_pagedir(pagedir_t *pdir)
         KASSERT(begin < end && begin > 0);
 
         uint32_t i;
-        for (i = begin; i <= end; ++i) {
-                if (PT_PRESENT & pdir->pd_physical[i]) {
+        for (i = begin; i <= end; ++i)
+        {
+                if (PT_PRESENT & pdir->pd_physical[i])
+                {
                         page_free(pdir->pd_virtual[i]);
                 }
         }
@@ -247,9 +257,12 @@ _pt_fault_handler(regs_t *regs)
         uint32_t cause = regs->r_err;
 
         /* Check if pagefault was in user space (otherwise, BAD!) */
-        if (cause & FAULT_USER) {
+        if (cause & FAULT_USER)
+        {
                 handle_pagefault(vaddr, cause);
-        } else {
+        }
+        else
+        {
                 panic("\nPage faulted while accessing 0x%08x\n", vaddr);
         }
 }
@@ -263,7 +276,8 @@ _pt_fill_page(pagedir_t *pd, pte_t *pt, pde_t pdflags, pte_t ptflags,
 
         uint32_t i;
         memset(pt, 0, PAGE_SIZE);
-        for (i = 0; i < PT_ENTRY_COUNT; ++i) {
+        for (i = 0; i < PT_ENTRY_COUNT; ++i)
+        {
                 pt[i] = (i * PAGE_SIZE + pstart) & PAGE_MASK;
                 pt[i] = pt[i] | (ptflags & ~(PAGE_MASK));
         }
@@ -281,8 +295,7 @@ _pt_fill_page(pagedir_t *pd, pte_t *pt, pde_t pdflags, pte_t ptflags,
         pd->pd_virtual[base] = pt;
 }
 
-void
-pt_init(void)
+void pt_init(void)
 {
         /* save the "current" page table (the temporary page
          * table created by the boot loader), note, the value is
@@ -302,8 +315,7 @@ pt_init(void)
         final_page = (pde_t *)((char *)pagedir + sizeof(*pagedir));
         KASSERT(PAGE_ALIGNED(final_page));
         memset(final_page, 0, PAGE_SIZE);
-        temppdir[PT_ENTRY_COUNT - 1] = ((uintptr_t)final_page
-                                        - (uintptr_t)&kernel_start + KERNEL_PHYS_BASE) | PT_PRESENT | PT_WRITE;
+        temppdir[PT_ENTRY_COUNT - 1] = ((uintptr_t)final_page - (uintptr_t)&kernel_start + KERNEL_PHYS_BASE) | PT_PRESENT | PT_WRITE;
         pagedir->pd_physical[PT_ENTRY_COUNT - 1] = temppdir[PT_ENTRY_COUNT - 1];
         pagedir->pd_virtual[PT_ENTRY_COUNT - 1] = final_page;
 
@@ -313,11 +325,12 @@ pt_init(void)
         /* identity map the first kernel_page_tables worth of physical memory */
         uintptr_t mapped = 0;
         pte_t *pagetable = final_page + PT_ENTRY_COUNT;
-        for (uint32_t cnt = 0; cnt < kernel_page_tables; cnt++) {
-            _pt_fill_page(pagedir, pagetable, PD_PRESENT | PD_WRITE, PT_PRESENT | PT_WRITE,
-                          mapped, mapped);
-            pagetable += PT_ENTRY_COUNT;
-            mapped += PT_VADDR_SIZE;
+        for (uint32_t cnt = 0; cnt < kernel_page_tables; cnt++)
+        {
+                _pt_fill_page(pagedir, pagetable, PD_PRESENT | PD_WRITE, PT_PRESENT | PT_WRITE,
+                              mapped, mapped);
+                pagetable += PT_ENTRY_COUNT;
+                mapped += PT_VADDR_SIZE;
         }
 
         /* map in where the kernel is with kernel_page_tables tables.
@@ -326,12 +339,13 @@ pt_init(void)
         uintptr_t map_start = (uintptr_t)&kernel_start;
         uintptr_t phys_start = KERNEL_PHYS_BASE;
         pagetable += PT_ENTRY_COUNT;
-        for (uint32_t cnt = 0; cnt < kernel_page_tables; cnt++) {
-            _pt_fill_page(pagedir, pagetable, PD_PRESENT | PD_WRITE, PT_PRESENT | PT_WRITE,
-                          map_start, phys_start);
-            map_start += PT_VADDR_SIZE;
-            phys_start += PT_VADDR_SIZE;
-            pagetable += PT_ENTRY_COUNT;
+        for (uint32_t cnt = 0; cnt < kernel_page_tables; cnt++)
+        {
+                _pt_fill_page(pagedir, pagetable, PD_PRESENT | PD_WRITE, PT_PRESENT | PT_WRITE,
+                              map_start, phys_start);
+                map_start += PT_VADDR_SIZE;
+                phys_start += PT_VADDR_SIZE;
+                pagetable += PT_ENTRY_COUNT;
         }
         /* Map the extra page. (needed in case we don't have enough extra space for the
          * last_page page directory. */
@@ -349,7 +363,8 @@ pt_init(void)
 
         uintptr_t vaddr = ((uintptr_t)&kernel_start);
         uintptr_t paddr = KERNEL_PHYS_BASE;
-        do {
+        do
+        {
                 pagetable += PT_ENTRY_COUNT;
                 vaddr += PT_VADDR_SIZE;
                 paddr += PT_VADDR_SIZE;
@@ -359,8 +374,7 @@ pt_init(void)
         page_add_range((uintptr_t)PAGE_ALIGN_UP(pagetable), physmax + ((uintptr_t)&kernel_start) - KERNEL_PHYS_BASE);
 }
 
-void
-pt_template_init()
+void pt_template_init()
 {
         /* the current page directory should be the same one set up by
          * the pt_init function above, it needs to be slighly modified
@@ -393,26 +407,33 @@ pt_mapping_info(const void *pt, char *buf, size_t osize)
         uint32_t pti = 0;
         int started = 0;
 
-        while (PT_ENTRY_COUNT > pdi) {
+        while (PT_ENTRY_COUNT > pdi)
+        {
                 pte_t *entry = NULL;
-                if (PD_PRESENT & pagedir->pd_physical[pdi]) {
-                        if (PT_PRESENT & pagedir->pd_virtual[pdi][pti]) {
+                if (PD_PRESENT & pagedir->pd_physical[pdi])
+                {
+                        if (PT_PRESENT & pagedir->pd_virtual[pdi][pti])
+                        {
                                 entry = &pagedir->pd_virtual[pdi][pti];
                         }
-                } else {
+                }
+                else
+                {
                         ++pdi;
                         pti = 0;
                 }
 
                 int present = (NULL != entry);
                 pexpect += PAGE_SIZE;
-                if (present && !started) {
+                if (present && !started)
+                {
                         started = 1;
                         vstart = (pdi * PT_ENTRY_COUNT + pti) * PAGE_SIZE;
                         pstart = *entry & PAGE_MASK;
                         pexpect = pstart;
-                } else if ((started && !present)
-                           || (started && present && ((*entry & PAGE_MASK) != pexpect))) {
+                }
+                else if ((started && !present) || (started && present && ((*entry & PAGE_MASK) != pexpect)))
+                {
                         uintptr_t vend = (pdi * PT_ENTRY_COUNT + pti) * PAGE_SIZE;
                         uintptr_t pend = pstart + (vend - vstart);
 
@@ -421,7 +442,8 @@ pt_mapping_info(const void *pt, char *buf, size_t osize)
                                 vstart, vend, pstart, pend);
                 }
 
-                if (++pti == PT_ENTRY_COUNT) {
+                if (++pti == PT_ENTRY_COUNT)
+                {
                         ++pdi;
                         pti = 0;
                 }

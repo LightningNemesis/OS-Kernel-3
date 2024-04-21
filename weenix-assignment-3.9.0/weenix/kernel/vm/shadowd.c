@@ -33,8 +33,7 @@
 static ktqueue_t shadowd_waitq, kmem_alloc_waitq;
 static int shadowd_initialized = 0;
 
-void
-shadowd_wakeup()
+void shadowd_wakeup()
 {
         /* If we run out of memory and need to wake up shadowd
          * before it has been properly initialized then the system
@@ -43,8 +42,7 @@ shadowd_wakeup()
         sched_broadcast_on(&shadowd_waitq);
 }
 
-void
-shadowd_alloc_sleep()
+void shadowd_alloc_sleep()
 {
         /* If we run out of memory and need to wake up shadowd
          * before it has been properly initialized then the system
@@ -72,27 +70,34 @@ shadowd_alloc_sleep()
 static void *
 shadowd(int arg1, void *arg2)
 {
-        while (1) {
+        while (1)
+        {
                 proc_t *p;
                 /* for each process, go through its vmareas */
-                list_iterate_begin(proc_list(), p, proc_t, p_list_link) {
+                list_iterate_begin(proc_list(), p, proc_t, p_list_link)
+                {
                         /* all of the dead process's shadow objects will be takenen care of by init */
-                        if (PROC_RUNNING == p->p_state) {
+                        if (PROC_RUNNING == p->p_state)
+                        {
                                 vmarea_t *vma;
-                                list_iterate_begin(&p->p_vmmap->vmm_list, vma, vmarea_t, vma_plink) {
+                                list_iterate_begin(&p->p_vmmap->vmm_list, vma, vmarea_t, vma_plink)
+                                {
                                         mmobj_t *last = vma->vma_obj, *o = last->mmo_shadowed;
                                         /* ref last, so if all processes on this branch die while shadowd is
                                          * sleeping, the branch won't get destroyed until shadowd() is done
                                          * with it */
                                         last->mmo_ops->ref(last);
-                                        while (NULL != o && NULL != o->mmo_shadowed) {
+                                        while (NULL != o && NULL != o->mmo_shadowed)
+                                        {
                                                 mmobj_t *shadow = o->mmo_shadowed;
                                                 /* iff the object has only one parent, and is not right under vm_area */
                                                 KASSERT(o != last);
-                                                if (o->mmo_refcount - o->mmo_nrespages == 1) {
+                                                if (o->mmo_refcount - o->mmo_nrespages == 1)
+                                                {
                                                         /* migrate all its pages to last, and remove it from the shadow tree */
                                                         pframe_t *pf;
-                                                        list_iterate_begin(&o->mmo_respages, pf, pframe_t, pf_olink) {
+                                                        list_iterate_begin(&o->mmo_respages, pf, pframe_t, pf_olink)
+                                                        {
                                                                 /* Because the operations that could be
                                                                  * performed with an intermediate shadow object
                                                                  * to make pages busy are non-blocking,
@@ -100,14 +105,17 @@ shadowd(int arg1, void *arg2)
                                                                 KASSERT(!pframe_is_busy(pf));
                                                                 /* o has refcount 1+nrespages, so this won't delete it yet */
                                                                 pframe_migrate(pf, last);
-                                                        } list_iterate_end();
+                                                        }
+                                                        list_iterate_end();
                                                         last->mmo_shadowed = o->mmo_shadowed;
                                                         /* Ref o's shadowed, so we don't accidentally delete it when we
                                                          * finally put o */
                                                         o->mmo_shadowed->mmo_ops->ref(o->mmo_shadowed);
                                                         KASSERT(o->mmo_refcount == 1 && o->mmo_nrespages == 0);
                                                         o->mmo_ops->put(o);
-                                                } else {
+                                                }
+                                                else
+                                                {
                                                         KASSERT(o->mmo_refcount - o->mmo_nrespages == 2);
                                                         o->mmo_ops->ref(o);
                                                         last->mmo_ops->put(last);
@@ -117,12 +125,15 @@ shadowd(int arg1, void *arg2)
                                         }
                                         KASSERT(NULL != last);
                                         last->mmo_ops->put(last);
-                                } list_iterate_end();
+                                }
+                                list_iterate_end();
                         }
-                } list_iterate_end();
+                }
+                list_iterate_end();
 
                 sched_broadcast_on(&kmem_alloc_waitq);
-                if (sched_cancellable_sleep_on(&shadowd_waitq) < 0) {
+                if (sched_cancellable_sleep_on(&shadowd_waitq) < 0)
+                {
                         return (void *)0;
                 }
         }
@@ -153,8 +164,7 @@ init_depends(sched_init);
 /*
  * Cancel the shadowd
  */
-void
-shadowd_shutdown()
+void shadowd_shutdown()
 {
         KASSERT(NULL != shadowd_thr);
         KASSERT(PID_IDLE == curproc->p_pid);

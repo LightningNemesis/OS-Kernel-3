@@ -41,9 +41,7 @@
 
 static int _elf32_platform_check(const Elf32_Ehdr *header)
 {
-        return (EM_386 == header->e_machine)
-               && (ELFCLASS32 == header->e_ident[EI_CLASS])
-               && (ELFDATA2LSB == header->e_ident[EI_DATA]);
+        return (EM_386 == header->e_machine) && (ELFCLASS32 == header->e_ident[EI_CLASS]) && (ELFDATA2LSB == header->e_ident[EI_DATA]);
 }
 
 /* Helper function for the ELF loader. Maps the specified segment
@@ -57,10 +55,13 @@ static int _elf32_platform_check(const Elf32_Ehdr *header)
 static int _elf32_map_segment(vmmap_t *map, vnode_t *file, int32_t memoff, const Elf32_Phdr *segment)
 {
         uintptr_t addr;
-        if (memoff < 0) {
-                KASSERT(ADDR_TO_PN(segment->p_vaddr) > (uint32_t) -memoff);
+        if (memoff < 0)
+        {
+                KASSERT(ADDR_TO_PN(segment->p_vaddr) > (uint32_t)-memoff);
                 addr = (uintptr_t)segment->p_vaddr - (uintptr_t)PN_TO_ADDR(-memoff);
-        } else {
+        }
+        else
+        {
                 addr = (uintptr_t)segment->p_vaddr + (uintptr_t)PN_TO_ADDR(memoff);
         }
         uint32_t off = segment->p_offset;
@@ -68,35 +69,44 @@ static int _elf32_map_segment(vmmap_t *map, vnode_t *file, int32_t memoff, const
         uint32_t filesz = segment->p_filesz;
 
         dbg(DBG_ELF, "Mapping program segment: type %#x, offset %#08x,"
-            " vaddr %#08x, filesz %#x, memsz %#x, flags %#x, align %#x\n",
+                     " vaddr %#08x, filesz %#x, memsz %#x, flags %#x, align %#x\n",
             segment->p_type, segment->p_offset, segment->p_vaddr,
             segment->p_filesz, segment->p_memsz, segment->p_flags,
             segment->p_align);
 
         /* check for bad data in the segment header */
-        if (PAGE_SIZE != segment->p_align) {
+        if (PAGE_SIZE != segment->p_align)
+        {
                 dbg(DBG_ELF, "ERROR: segment does not have correct alignment\n");
                 return -ENOEXEC;
-        } else if (filesz > memsz) {
+        }
+        else if (filesz > memsz)
+        {
                 dbg(DBG_ELF, "ERROR: segment file size is greater than memory size\n");
                 return -ENOEXEC;
-        } else if (PAGE_OFFSET(addr) != PAGE_OFFSET(off)) {
+        }
+        else if (PAGE_OFFSET(addr) != PAGE_OFFSET(off))
+        {
                 dbg(DBG_ELF, "ERROR: segment address and offset are not aligned correctly\n");
                 return -ENOEXEC;
         }
 
         int perms = 0;
-        if (PF_R & segment->p_flags) {
+        if (PF_R & segment->p_flags)
+        {
                 perms |= PROT_READ;
         }
-        if (PF_W & segment->p_flags) {
+        if (PF_W & segment->p_flags)
+        {
                 perms |= PROT_WRITE;
         }
-        if (PF_X & segment->p_flags) {
+        if (PF_X & segment->p_flags)
+        {
                 perms |= PROT_EXEC;
         }
 
-        if (0 < filesz) {
+        if (0 < filesz)
+        {
                 /* something needs to be mapped from the file */
                 /* start from the starting address and include enough pages to
                  * map all filesz bytes of the file */
@@ -105,30 +115,39 @@ static int _elf32_map_segment(vmmap_t *map, vnode_t *file, int32_t memoff, const
                 off_t fileoff = (off_t)PAGE_ALIGN_DOWN(off);
 
                 int ret;
-                if (!vmmap_is_range_empty(map, lopage, npages)) {
+                if (!vmmap_is_range_empty(map, lopage, npages))
+                {
                         dbg(DBG_ELF, "ERROR: ELF file contains overlapping segments\n");
                         return -ENOEXEC;
-                } else if (0 > (ret = vmmap_map(map, file, lopage, npages, perms,
-                                                MAP_PRIVATE | MAP_FIXED, fileoff,
-                                                0, NULL))) {
+                }
+                else if (0 > (ret = vmmap_map(map, file, lopage, npages, perms,
+                                              MAP_PRIVATE | MAP_FIXED, fileoff,
+                                              0, NULL)))
+                {
                         return ret;
                 }
         }
 
-        if (memsz > filesz) {
+        if (memsz > filesz)
+        {
                 /* there is left over memory in the segment which must
                  * be initialized to 0 (anonymously mapped) */
                 uint32_t lopage = ADDR_TO_PN(addr + filesz);
                 uint32_t npages = ADDR_TO_PN(PAGE_ALIGN_UP(addr + memsz)) - lopage;
 
                 int ret;
-                if (npages > 1 && !vmmap_is_range_empty(map, lopage + 1, npages - 1)) {
+                if (npages > 1 && !vmmap_is_range_empty(map, lopage + 1, npages - 1))
+                {
                         dbg(DBG_ELF, "ERROR: ELF file contains overlapping segments\n");
                         return -ENOEXEC;
-                } else if (0 > (ret = vmmap_map(map, NULL, lopage, npages, perms,
-                                                MAP_PRIVATE | MAP_FIXED, 0, 0, NULL))) {
+                }
+                else if (0 > (ret = vmmap_map(map, NULL, lopage, npages, perms,
+                                              MAP_PRIVATE | MAP_FIXED, 0, 0, NULL)))
+                {
                         return ret;
-                } else if (!PAGE_ALIGNED(addr + filesz) && filesz > 0) {
+                }
+                else if (!PAGE_ALIGNED(addr + filesz) && filesz > 0)
+                {
                         /* In this case, we have accidentally zeroed too much of memory, as
                          * we zeroed all memory in the page containing addr + filesz.
                          * However, the remaining part of the data is not a full page, so we
@@ -141,8 +160,9 @@ static int _elf32_map_segment(vmmap_t *map, vnode_t *file, int32_t memoff, const
                         void *buf;
                         if (NULL == (buf = page_alloc()))
                                 return -ENOMEM;
-                        if (!(0 > (ret = file->vn_ops->read(file, (off_t) PAGE_ALIGN_DOWN(off + filesz),
-                                                            buf, PAGE_OFFSET(addr + filesz))))) {
+                        if (!(0 > (ret = file->vn_ops->read(file, (off_t)PAGE_ALIGN_DOWN(off + filesz),
+                                                            buf, PAGE_OFFSET(addr + filesz)))))
+                        {
                                 ret = vmmap_write(map, PAGE_ALIGN_DOWN(addr + filesz),
                                                   buf, PAGE_OFFSET(addr + filesz));
                         }
@@ -165,12 +185,17 @@ static int _elf32_load_ehdr(int fd, Elf32_Ehdr *header, int interp)
         memset(header, 0, sizeof(*header));
 
         /* Preliminary check that this is an ELF file */
-        if (0 > (err = do_read(fd, header, sizeof(*header)))) {
+        if (0 > (err = do_read(fd, header, sizeof(*header))))
+        {
                 return err;
-        } else if ((SELFMAG > err) || 0 != memcmp(&header->e_ident[0], ELFMAG, SELFMAG)) {
+        }
+        else if ((SELFMAG > err) || 0 != memcmp(&header->e_ident[0], ELFMAG, SELFMAG))
+        {
                 dbg(DBG_ELF, "ELF load failed: no magic number present\n");
                 return -ENOEXEC;
-        } else if (header->e_ehsize > err) {
+        }
+        else if (header->e_ehsize > err)
+        {
                 dbg(DBG_ELF, "ELF load failed: bad file size\n");
                 return -ENOEXEC;
         }
@@ -185,10 +210,13 @@ static int _elf32_load_ehdr(int fd, Elf32_Ehdr *header, int interp)
 
         /* Check that the ELF file is executable and targets
          * the correct platform */
-        if (ET_EXEC != header->e_type && !(ET_DYN == header->e_type && interp)) {
+        if (ET_EXEC != header->e_type && !(ET_DYN == header->e_type && interp))
+        {
                 dbg(DBG_ELF, "ELF load failed: not exectuable ELF\n");
                 return -ENOEXEC;
-        } else if (!_elf32_platform_check(header)) {
+        }
+        else if (!_elf32_platform_check(header))
+        {
                 dbg(DBG_ELF, "ELF load failed: incorrect platform\n");
                 return -ENOEXEC;
         }
@@ -207,14 +235,17 @@ static int _elf32_load_phtable(int fd, Elf32_Ehdr *header, char *pht, size_t siz
         int err = 0;
         size_t phtsize = header->e_phentsize * header->e_phnum;
         KASSERT(phtsize <= size);
-        if (0 > (err = do_lseek(fd, header->e_phoff, SEEK_SET))) {
+        if (0 > (err = do_lseek(fd, header->e_phoff, SEEK_SET)))
+        {
                 goto done;
         }
-        if (0 > (err = do_read(fd, pht, phtsize))) {
+        if (0 > (err = do_read(fd, pht, phtsize)))
+        {
                 goto done;
         }
         KASSERT(err <= (int)phtsize);
-        if (err < (int)phtsize) {
+        if (err < (int)phtsize)
+        {
                 err = -ENOEXEC;
                 goto done;
         }
@@ -239,18 +270,24 @@ static int _elf32_map_progsegs(vnode_t *vnode, vmmap_t *map, Elf32_Ehdr *header,
 
         uint32_t i = 0;
         int loadcount = 0;
-        for (i = 0; i < header->e_phnum; ++i) {
+        for (i = 0; i < header->e_phnum; ++i)
+        {
                 Elf32_Phdr *phtentry = (Elf32_Phdr *)(pht + (i * header->e_phentsize));
-                if (PT_LOAD == phtentry->p_type) {
-                        if (0 > (err = _elf32_map_segment(map, vnode, memoff, phtentry))) {
+                if (PT_LOAD == phtentry->p_type)
+                {
+                        if (0 > (err = _elf32_map_segment(map, vnode, memoff, phtentry)))
+                        {
                                 goto done;
-                        } else {
+                        }
+                        else
+                        {
                                 ++loadcount;
                         }
                 }
         }
 
-        if (0 == loadcount) {
+        if (0 == loadcount)
+        {
                 dbg(DBG_ELF, "ERROR: ELF file contained no loadable sections\n");
                 err = -ENOEXEC;
                 goto done;
@@ -272,12 +309,17 @@ static int _elf32_find_phinterp(Elf32_Ehdr *header, char *pht, Elf32_Phdr **phin
         *phinterp = NULL;
 
         uint32_t i = 0;
-        for (i = 0; i < header->e_phnum; ++i) {
+        for (i = 0; i < header->e_phnum; ++i)
+        {
                 Elf32_Phdr *phtentry = (Elf32_Phdr *)(pht + (i * header->e_phentsize));
-                if (PT_INTERP == phtentry->p_type) {
-                        if (NULL == *phinterp) {
+                if (PT_INTERP == phtentry->p_type)
+                {
+                        if (NULL == *phinterp)
+                        {
                                 *phinterp = phtentry;
-                        } else {
+                        }
+                        else
+                        {
                                 dbg(DBG_ELF, "ELF load failed: multiple interpreters\n");
                                 err = -EINVAL;
                                 goto done;
@@ -296,12 +338,14 @@ done:
  * Return the low and high vaddrs in the given arguments if they are non-NULL. */
 static void _elf32_calc_progbounds(Elf32_Ehdr *header, char *pht, void **low, void **high)
 {
-        Elf32_Addr curlow = (Elf32_Addr) - 1;
+        Elf32_Addr curlow = (Elf32_Addr)-1;
         Elf32_Addr curhigh = 0;
         uint32_t i = 0;
-        for (i = 0; i < header->e_phnum; ++i) {
+        for (i = 0; i < header->e_phnum; ++i)
+        {
                 Elf32_Phdr *phtentry = (Elf32_Phdr *)(pht + (i * header->e_phentsize));
-                if (PT_LOAD == phtentry->p_type) {
+                if (PT_LOAD == phtentry->p_type)
+                {
                         if (phtentry->p_vaddr < curlow)
                                 curlow = phtentry->p_vaddr;
                         if (phtentry->p_vaddr + phtentry->p_memsz > curhigh)
@@ -309,9 +353,9 @@ static void _elf32_calc_progbounds(Elf32_Ehdr *header, char *pht, void **low, vo
                 }
         }
         if (NULL != low)
-                *low = (void *) curlow;
+                *low = (void *)curlow;
         if (NULL != high)
-                *high = (void *) curhigh;
+                *high = (void *)curhigh;
 }
 
 /* Calculates the total size of all the arguments that need to be placed on the
@@ -324,20 +368,24 @@ static size_t _elf32_calc_argsize(char *const argv[], char *const envp[], Elf32_
         size_t size = 0;
         int i;
         /* All strings in argv */
-        for (i = 0; argv[i] != NULL; i++) {
+        for (i = 0; argv[i] != NULL; i++)
+        {
                 size += strlen(argv[i]) + 1; /* null terminator */
         }
-        if (argc != NULL) {
+        if (argc != NULL)
+        {
                 *argc = i;
         }
         /* argv itself (+ null terminator) */
         size += (i + 1) * sizeof(char *);
 
         /* All strings in envp */
-        for (i = 0; envp[i] != NULL; i++) {
+        for (i = 0; envp[i] != NULL; i++)
+        {
                 size += strlen(envp[i]) + 1; /* null terminator */
         }
-        if (envc != NULL) {
+        if (envc != NULL)
+        {
                 *envc = i;
         }
         /* envp itself (+ null terminator) */
@@ -345,12 +393,15 @@ static size_t _elf32_calc_argsize(char *const argv[], char *const envp[], Elf32_
 
         /* The only extra-space-consuming entry in auxv is AT_PHDR, as if we find
          * that entry we'll need to put the program header table on the stack */
-        for (i = 0; auxv[i].a_type != AT_NULL; i++) {
-                if (auxv[i].a_type == AT_PHDR) {
+        for (i = 0; auxv[i].a_type != AT_NULL; i++)
+        {
+                if (auxv[i].a_type == AT_PHDR)
+                {
                         size += phtsize;
                 }
         }
-        if (auxc != NULL) {
+        if (auxc != NULL)
+        {
                 *auxc = i;
         }
         /* auxv itself (+ null terminator) */
@@ -382,7 +433,7 @@ static void _elf32_load_args(vmmap_t *map, void *arglow, size_t argsize, char *b
         int i;
 
         /* Copy argc */
-        *((int *) buf) = argc;
+        *((int *)buf) = argc;
 
         /* Calculate where the strings / tables pointed to by the vectors start */
         size_t veclen = (argc + 1 + envc + 1) * sizeof(char *) + (auxc + 1) * sizeof(Elf32_auxv_t);
@@ -405,39 +456,43 @@ static void _elf32_load_args(vmmap_t *map, void *arglow, size_t argsize, char *b
         *(char **)(buf + 12) = vvecstart + (argc + 1 + envc + 1) * sizeof(char *);
 
         /* Copy over argv along with every string in it */
-        for (i = 0; i < argc; i++) {
+        for (i = 0; i < argc; i++)
+        {
                 size_t len = strlen(argv[i]) + 1;
                 strcpy(strstart, argv[i]);
                 /* Remember that we need to use the virtual address of the string */
-                *(char **) vecstart = vstrstart;
+                *(char **)vecstart = vstrstart;
                 strstart += len;
                 vstrstart += len;
                 vecstart += sizeof(char *);
         }
         /* null terminator of argv */
-        *(char **) vecstart = NULL;
+        *(char **)vecstart = NULL;
         vecstart += sizeof(char *);
 
         /* Copy over envp along with every string in it */
-        for (i = 0; i < envc; i++) {
+        for (i = 0; i < envc; i++)
+        {
                 size_t len = strlen(envp[i]) + 1;
                 strcpy(strstart, envp[i]);
                 /* Remember that we need to use the virtual address of the string */
-                *(char **) vecstart = vstrstart;
+                *(char **)vecstart = vstrstart;
                 strstart += len;
                 vstrstart += len;
                 vecstart += sizeof(char *);
         }
         /* null terminator of envp */
-        *(char **) vecstart = NULL;
+        *(char **)vecstart = NULL;
         vecstart += sizeof(char *);
 
         /* Copy over auxv along with the program header (if we find it) */
-        for (i = 0; i < auxc; i++) {
+        for (i = 0; i < auxc; i++)
+        {
                 /* Copy over the auxv entry */
                 memcpy(vecstart, &auxv[i], sizeof(Elf32_auxv_t));
                 /* Check if it points to the program header */
-                if (auxv[i].a_type == AT_PHDR) {
+                if (auxv[i].a_type == AT_PHDR)
+                {
                         /* Copy over the program header table */
                         memcpy(strstart, auxv[i].a_un.a_ptr, phtsize);
                         /* And modify the address */
@@ -454,7 +509,6 @@ static void _elf32_load_args(vmmap_t *map, void *arglow, size_t argsize, char *b
         /* If this failed, we must have set up the address space wrong... */
         KASSERT(0 == ret);
 }
-
 
 static int _elf32_load(const char *filename, int fd, char *const argv[],
                        char *const envp[], uint32_t *eip, uint32_t *esp)
@@ -480,32 +534,38 @@ static int _elf32_load(const char *filename, int fd, char *const argv[],
         KASSERT(NULL != file);
 
         /* Load and verify the ELF header */
-        if (0 > (err = _elf32_load_ehdr(fd, &header, 0))) {
+        if (0 > (err = _elf32_load_ehdr(fd, &header, 0)))
+        {
                 goto done;
         }
 
-        if (NULL == (map = vmmap_create())) {
+        if (NULL == (map = vmmap_create()))
+        {
                 err = -ENOMEM;
                 goto done;
         }
 
         size_t phtsize = header.e_phentsize * header.e_phnum;
-        if (NULL == (pht = kmalloc(phtsize))) {
+        if (NULL == (pht = kmalloc(phtsize)))
+        {
                 err = -ENOMEM;
                 goto done;
         }
         /* Read in the program header table */
-        if (0 > (err = _elf32_load_phtable(fd, &header, pht, phtsize))) {
+        if (0 > (err = _elf32_load_phtable(fd, &header, pht, phtsize)))
+        {
                 goto done;
         }
         /* Load the segments in the program header table */
-        if (0 > (err = _elf32_map_progsegs(file->f_vnode, map, &header, pht, 0))) {
+        if (0 > (err = _elf32_map_progsegs(file->f_vnode, map, &header, pht, 0)))
+        {
                 goto done;
         }
 
         Elf32_Phdr *phinterp = NULL;
         /* Check if program requires an interpreter */
-        if (0 > (err = _elf32_find_phinterp(&header, pht, &phinterp))) {
+        if (0 > (err = _elf32_find_phinterp(&header, pht, &phinterp)))
+        {
                 goto done;
         }
 
@@ -514,27 +574,35 @@ static int _elf32_load(const char *filename, int fd, char *const argv[],
         void *proghigh;
         _elf32_calc_progbounds(&header, pht, &proglow, &proghigh);
 
-        entry = (uintptr_t) header.e_entry;
+        entry = (uintptr_t)header.e_entry;
 
         /* if an interpreter was requested load it */
-        if (NULL != phinterp) {
+        if (NULL != phinterp)
+        {
                 /* read the file name of the interpreter from the binary */
-                if (0 > (err = do_lseek(fd, phinterp->p_offset, SEEK_SET))) {
-                        goto done;
-                } else if (NULL == (interpname = kmalloc(phinterp->p_filesz))) {
-                        err = -ENOMEM;
-                        goto done;
-                } else if (0 > (err = do_read(fd, interpname, phinterp->p_filesz))) {
+                if (0 > (err = do_lseek(fd, phinterp->p_offset, SEEK_SET)))
+                {
                         goto done;
                 }
-                if (err != (int)phinterp->p_filesz) {
+                else if (NULL == (interpname = kmalloc(phinterp->p_filesz)))
+                {
+                        err = -ENOMEM;
+                        goto done;
+                }
+                else if (0 > (err = do_read(fd, interpname, phinterp->p_filesz)))
+                {
+                        goto done;
+                }
+                if (err != (int)phinterp->p_filesz)
+                {
                         err = -ENOEXEC;
                         goto done;
                 }
 
                 /* open the interpreter */
                 dbgq(DBG_ELF, "ELF Interpreter: %*s\n", phinterp->p_filesz, interpname);
-                if (0 > (interpfd = do_open(interpname, O_RDONLY))) {
+                if (0 > (interpfd = do_open(interpname, O_RDONLY)))
+                {
                         err = interpfd;
                         goto done;
                 }
@@ -545,25 +613,30 @@ static int _elf32_load(const char *filename, int fd, char *const argv[],
                 KASSERT(NULL != interpfile);
 
                 /* Load and verify the interpreter ELF header */
-                if (0 > (err = _elf32_load_ehdr(interpfd, &interpheader, 1))) {
+                if (0 > (err = _elf32_load_ehdr(interpfd, &interpheader, 1)))
+                {
                         goto done;
                 }
                 size_t interpphtsize = interpheader.e_phentsize * interpheader.e_phnum;
-                if (NULL == (interppht = kmalloc(interpphtsize))) {
+                if (NULL == (interppht = kmalloc(interpphtsize)))
+                {
                         err = -ENOMEM;
                         goto done;
                 }
                 /* Read in the program header table */
-                if (0 > (err = _elf32_load_phtable(interpfd, &interpheader, interppht, interpphtsize))) {
+                if (0 > (err = _elf32_load_phtable(interpfd, &interpheader, interppht, interpphtsize)))
+                {
                         goto done;
                 }
 
                 /* Interpreter shouldn't itself need an interpreter */
                 Elf32_Phdr *interpphinterp;
-                if (0 > (err = _elf32_find_phinterp(&interpheader, interppht, &interpphinterp))) {
+                if (0 > (err = _elf32_find_phinterp(&interpheader, interppht, &interpphinterp)))
+                {
                         goto done;
                 }
-                if (NULL != interpphinterp) {
+                if (NULL != interpphinterp)
+                {
                         err = -EINVAL;
                         goto done;
                 }
@@ -576,8 +649,9 @@ static int _elf32_load(const char *filename, int fd, char *const argv[],
 
                 /* Find space for the interpreter */
                 /* This is the first pn at which the interpreter will be mapped */
-                uint32_t interppagebase = (uint32_t) vmmap_find_range(map, interpnpages, VMMAP_DIR_HILO);
-                if ((uint32_t) - 1 == interppagebase) {
+                uint32_t interppagebase = (uint32_t)vmmap_find_range(map, interpnpages, VMMAP_DIR_HILO);
+                if ((uint32_t)-1 == interppagebase)
+                {
                         err = -ENOMEM;
                         goto done;
                 }
@@ -586,19 +660,21 @@ static int _elf32_load(const char *filename, int fd, char *const argv[],
                 void *interpbase = (void *)((uintptr_t)PN_TO_ADDR(interppagebase) + PAGE_OFFSET(interplow));
 
                 /* Offset from "expected base" in number of pages */
-                int32_t interpoff = (int32_t) interppagebase - (int32_t) ADDR_TO_PN(interplow);
+                int32_t interpoff = (int32_t)interppagebase - (int32_t)ADDR_TO_PN(interplow);
 
-                entry = (uintptr_t) interpbase + ((uintptr_t) interpheader.e_entry - (uintptr_t) interplow);
+                entry = (uintptr_t)interpbase + ((uintptr_t)interpheader.e_entry - (uintptr_t)interplow);
 
                 /* Load the interpreter program header and map in its segments */
-                if (0 > (err = _elf32_map_progsegs(interpfile->f_vnode, map, &interpheader, interppht, interpoff))) {
+                if (0 > (err = _elf32_map_progsegs(interpfile->f_vnode, map, &interpheader, interppht, interpoff)))
+                {
                         goto done;
                 }
 
                 /* Build the ELF aux table */
                 /* Need to hold AT_PHDR, AT_PHENT, AT_PHNUM, AT_ENTRY, AT_BASE,
                  * AT_PAGESZ, AT_NULL */
-                if (NULL == (auxv = (Elf32_auxv_t *) kmalloc(7 * sizeof(Elf32_auxv_t)))) {
+                if (NULL == (auxv = (Elf32_auxv_t *)kmalloc(7 * sizeof(Elf32_auxv_t))))
+                {
                         err = -ENOMEM;
                         goto done;
                 }
@@ -618,7 +694,7 @@ static int _elf32_load(const char *filename, int fd, char *const argv[],
                 auxvent++;
 
                 auxvent->a_type = AT_ENTRY;
-                auxvent->a_un.a_ptr = (void *) header.e_entry;
+                auxvent->a_un.a_ptr = (void *)header.e_entry;
                 auxvent++;
 
                 auxvent->a_type = AT_BASE;
@@ -630,10 +706,12 @@ static int _elf32_load(const char *filename, int fd, char *const argv[],
                 auxvent++;
 
                 auxvent->a_type = AT_NULL;
-
-        } else {
+        }
+        else
+        {
                 /* Just put AT_NULL (we don't really need this at all) */
-                if (NULL == (auxv = (Elf32_auxv_t *) kmalloc(sizeof(Elf32_auxv_t)))) {
+                if (NULL == (auxv = (Elf32_auxv_t *)kmalloc(sizeof(Elf32_auxv_t))))
+                {
                         err = -ENOMEM;
                         goto done;
                 }
@@ -650,22 +728,23 @@ static int _elf32_load(const char *filename, int fd, char *const argv[],
         dbg(DBG_ELF, "Mapped stack at low addr 0x%p, size %#x\n",
             PN_TO_ADDR(stack_lopage), DEFAULT_STACK_SIZE + PAGE_SIZE);
 
-
         /* Copy out arguments onto the user stack */
         int argc, envc, auxc;
         size_t argsize = _elf32_calc_argsize(argv, envp, auxv, phtsize, &argc, &envc, &auxc);
         /* Make sure it fits on the stack */
-        if (argsize >= DEFAULT_STACK_SIZE) {
+        if (argsize >= DEFAULT_STACK_SIZE)
+        {
                 err = -E2BIG;
                 goto done;
         }
         /* Copy arguments into kernel buffer */
-        if (NULL == (argbuf = (char *) kmalloc(argsize))) {
+        if (NULL == (argbuf = (char *)kmalloc(argsize)))
+        {
                 err = -ENOMEM;
                 goto done;
         }
         /* Calculate where in user space we start putting the args. */
-        void *arglow = (void *)((uintptr_t)(((char *) proglow) - argsize) & ~PTR_MASK);
+        void *arglow = (void *)((uintptr_t)(((char *)proglow) - argsize) & ~PTR_MASK);
         /* Copy everything into the user address space, modifying addresses in
          * argv, envp, and auxv to be user addresses as we go. */
         _elf32_load_args(map, arglow, argsize, argbuf, argv, envp, auxv, argc, envc, auxc, phtsize);
@@ -694,8 +773,8 @@ static int _elf32_load(const char *filename, int fd, char *const argv[],
 
         /* Tell the caller the correct stack pointer and instruction
          * pointer to begin execution in user space */
-        *eip = (uint32_t) entry;
-        *esp = ((uint32_t) arglow) - 4; /* Space on the user stack for the (garbage) return address */
+        *eip = (uint32_t)entry;
+        *esp = ((uint32_t)arglow) - 4; /* Space on the user stack for the (garbage) return address */
         /* Note that the return address will be fixed by the userland entry code,
          * whether in static or dynamic */
 
@@ -703,31 +782,40 @@ static int _elf32_load(const char *filename, int fd, char *const argv[],
         err = 0;
 
 done:
-        if (NULL != map) {
+        if (NULL != map)
+        {
                 vmmap_destroy(map);
         }
-        if (NULL != file) {
+        if (NULL != file)
+        {
                 fput(file);
         }
-        if (NULL != pht) {
+        if (NULL != pht)
+        {
                 kfree(pht);
         }
-        if (NULL != interpname) {
+        if (NULL != interpname)
+        {
                 kfree(interpname);
         }
-        if (0 <= interpfd) {
+        if (0 <= interpfd)
+        {
                 do_close(interpfd);
         }
-        if (NULL != interpfile) {
+        if (NULL != interpfile)
+        {
                 fput(interpfile);
         }
-        if (NULL != interppht) {
+        if (NULL != interppht)
+        {
                 kfree(interppht);
         }
-        if (NULL != auxv) {
+        if (NULL != auxv)
+        {
                 kfree(auxv);
         }
-        if (NULL != argbuf) {
+        if (NULL != argbuf)
+        {
                 kfree(argbuf);
         }
         return err;

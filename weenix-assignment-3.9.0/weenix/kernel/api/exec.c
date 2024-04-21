@@ -25,7 +25,6 @@
 #include "api/binfmt.h"
 #include "api/syscall.h"
 
-
 /* Enters userland from the kernel. Call this for a process that has up to now
  * been a kernel-only process. Takes the registers to start userland execution
  * with. Does not return. Note that the regs passed in should be on the current
@@ -37,27 +36,27 @@ void userland_entry(const regs_t *regs)
         intr_setipl(IPL_LOW);
         /* We "return from the interrupt" to get into userland */
         __asm__ __volatile__(
-                "movl %%eax, %%esp\n\t" /* Move stack pointer up to regs */
-                "pop %%es\n\t"          /* Set userland data and extra segment appropriately */
-                "pop %%ds\n\t"
-                "popa\n\t"
-                "add $8, %%esp\n\t"     /*
-                                         * Move stack pointer up to the location of the
-                                         * arguments automatically pushed by the processor
-                                         * on an interrupt
-                                         */
-                "iret\n"
-                /* We're now in userland! */
-                : /* No outputs */
-                : "a"(regs)
-        );
+            "movl %%eax, %%esp\n\t" /* Move stack pointer up to regs */
+            "pop %%es\n\t"          /* Set userland data and extra segment appropriately */
+            "pop %%ds\n\t"
+            "popa\n\t"
+            "add $8, %%esp\n\t" /*
+                                 * Move stack pointer up to the location of the
+                                 * arguments automatically pushed by the processor
+                                 * on an interrupt
+                                 */
+            "iret\n"
+            /* We're now in userland! */
+            : /* No outputs */
+            : "a"(regs));
 }
 
 int do_execve(const char *filename, char *const *argv, char *const *envp, struct regs *regs)
 {
         uint32_t eip, esp;
         int ret = binfmt_load(filename, argv, envp, &eip, &esp);
-        if (ret < 0) {
+        if (ret < 0)
+        {
                 return ret;
         }
         /* Make sure we "return" into the start of the newly loaded binary */

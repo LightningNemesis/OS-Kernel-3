@@ -1,3 +1,20 @@
+/******************************************************************************/
+/* Important Spring 2024 CSCI 402 usage information:                          */
+/*                                                                            */
+/* This fils is part of CSCI 402 kernel programming assignments at USC.       */
+/*         53616c7465645f5fd1e93dbf35cbffa3aef28f8c01d8cf2ffc51ef62b26a       */
+/*         f9bda5a68e5ed8c972b17bab0f42e24b19daa7bd408305b1f7bd6c7208c1       */
+/*         0e36230e913039b3046dd5fd0ba706a624d33dbaa4d6aab02c82fe09f561       */
+/*         01b0fd977b0051f0b0ce0c69f7db857b1b5e007be2db6d42894bf93de848       */
+/*         806d9152bd5715e9                                                   */
+/* Please understand that you are NOT permitted to distribute or publically   */
+/*         display a copy of this file (or ANY PART of it) for any reason.    */
+/* If anyone (including your prospective employer) asks you to post the code, */
+/*         you must inform them that you do NOT have permissions to do so.    */
+/* You are also NOT permitted to remove or alter this comment block.          */
+/* If this comment block is removed or altered in a submitted file, 20 points */
+/*         will be deducted.                                                  */
+/******************************************************************************/
 
 #include "globals.h"
 #include "errno.h"
@@ -23,7 +40,8 @@
  */
 int copy_from_user(void *kaddr, const void *uaddr, size_t nbytes)
 {
-        if (!range_perm(curproc, uaddr, nbytes, PROT_READ)) {
+        if (!range_perm(curproc, uaddr, nbytes, PROT_READ))
+        {
                 return -EFAULT;
         }
         return vmmap_read(curproc->p_vmmap, uaddr, kaddr, nbytes);
@@ -31,7 +49,8 @@ int copy_from_user(void *kaddr, const void *uaddr, size_t nbytes)
 
 int copy_to_user(void *uaddr, const void *kaddr, size_t nbytes)
 {
-        if (!range_perm(curproc, uaddr, nbytes, PROT_WRITE)) {
+        if (!range_perm(curproc, uaddr, nbytes, PROT_WRITE))
+        {
                 return -EFAULT;
         }
         return vmmap_write(curproc->p_vmmap, uaddr, kaddr, nbytes);
@@ -47,11 +66,13 @@ char *user_strdup(argstr_t *ustr)
         char *kstr;
         int ret;
 
-        if (NULL == (kstr = (char *) kmalloc(ustr->as_len + 1))) {
+        if (NULL == (kstr = (char *)kmalloc(ustr->as_len + 1)))
+        {
                 curthr->kt_errno = ENOMEM;
                 return NULL;
         }
-        if (0 > (ret = copy_from_user(kstr, ustr->as_str, ustr->as_len + 1))) {
+        if (0 > (ret = copy_from_user(kstr, ustr->as_str, ustr->as_len + 1)))
+        {
                 curthr->kt_errno = -ret;
                 kfree(kstr);
                 return NULL;
@@ -69,23 +90,28 @@ char **user_vecdup(argvec_t *uvec)
         size_t i;
         int ret;
 
-        if (NULL == (temp_kvec = (argstr_t *) kmalloc((uvec->av_len + 1) * sizeof(argstr_t)))) {
+        if (NULL == (temp_kvec = (argstr_t *)kmalloc((uvec->av_len + 1) * sizeof(argstr_t))))
+        {
                 ret = -ENOMEM;
                 goto fail;
         }
-        if (NULL == (kvec = (char **) kmalloc((uvec->av_len + 1) * sizeof(char *)))) {
+        if (NULL == (kvec = (char **)kmalloc((uvec->av_len + 1) * sizeof(char *))))
+        {
                 ret = -ENOMEM;
                 goto fail;
         }
         /* Copy over the array of argstrs */
         if (0 > (ret = copy_from_user(temp_kvec, uvec->av_vec,
-                                      (uvec->av_len + 1) * sizeof(argstr_t)))) {
+                                      (uvec->av_len + 1) * sizeof(argstr_t))))
+        {
                 goto fail;
         }
 
         /* For each arstr in temp_kvec, user_strdup a copy and put in kvec */
-        for (i = 0; i < uvec->av_len; i++) {
-                if (NULL == (kvec[i] = user_strdup(&temp_kvec[i]))) {
+        for (i = 0; i < uvec->av_len; i++)
+        {
+                if (NULL == (kvec[i] = user_strdup(&temp_kvec[i])))
+                {
                         /* Need to clean up all allocated stuff; errno set in strdup */
                         ret = -curthr->kt_errno;
                         goto fail;
@@ -97,9 +123,12 @@ char **user_vecdup(argvec_t *uvec)
         return kvec;
 
 fail:
-        if (kvec != NULL) {
-                for (i = 0; kvec[i] != NULL; i++) {
-                        if (kvec[i] != NULL) {
+        if (kvec != NULL)
+        {
+                for (i = 0; kvec[i] != NULL; i++)
+                {
+                        if (kvec[i] != NULL)
+                        {
                                 kfree(kvec[i]);
                         }
                 }
@@ -121,39 +150,10 @@ fail:
  * function should return 1 on success, and 0 on failure (think of it as
  * anwering the question "does process p have permission perm on address vaddr?")
  */
-int
-addr_perm(struct proc *p, const void *vaddr, int perm)
+int addr_perm(struct proc *p, const void *vaddr, int perm)
 {
-        // NOT_YET_IMPLEMENTED("VM: addr_perm");
-
-        // you need to find the process's vm_area that contains that virtual address
-        vmarea_t* vmarea = vmmap_lookup(p->p_vmmap, ADDR_TO_PN(vaddr));
-        // check vmarea
-        if(NULL == vmarea){
-                return 0;
-        }
-
-        // check permission
-        // int needRead = perm & PROT_READ;
-        // int needWrite = perm & PROT_WRITE;
-        // int needExec = perm & PROT_EXEC;
-        // if(needRead){
-        //         if(!(vmarea->vma_prot & PROT_READ)){
-        //                 return 0;
-        //         }
-        // }
-        // if(needWrite){
-        //         if(!(vmarea->vma_prot & PROT_WRITE)){
-        //                 return 0;
-        //         }
-        // }
-        // if(needExec){
-        //         if(!(vmarea->vma_prot & PROT_EXEC)){
-        //                 return 0;
-        //         }
-        // }
-
-        return 1;
+        NOT_YET_IMPLEMENTED("VM: addr_perm");
+        return 0;
 }
 
 /*
@@ -165,21 +165,8 @@ addr_perm(struct proc *p, const void *vaddr, int perm)
  * Like addr_perm, this function should return 1 if the range is valid for
  * the given permissions, and 0 otherwise.
  */
-int
-range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
+int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
 {
-        // NOT_YET_IMPLEMENTED("VM: range_perm");
-
-        uint32_t offset = 0;
-        // avaddr + offset < avaddr + len => offset < len
-        while(offset < len){
-                // check page
-                if(!addr_perm(p, (char*) avaddr + offset, perm)){
-                        return 0;
-                }
-                // next page
-                offset += PAGE_SIZE;
-        }
-
-        return 1;
+        NOT_YET_IMPLEMENTED("VM: range_perm");
+        return 0;
 }
