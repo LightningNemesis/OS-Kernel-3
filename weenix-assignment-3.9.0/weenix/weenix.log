@@ -25,9 +25,8 @@
 [0m[31;40mtest/kshell/kshell.c:98 kshell_add_command(): Added thrtest command
 [0m[31;40mtest/kshell/kshell.c:98 kshell_add_command(): Added dirtest command
 [0m[0mmain/kmain.c:300 initproc_run(): (GRADING2B)
-[0mweenix: vfs shutdown...
-[0mfs/s5fs/s5fs.c:1133 s5fs_check_refcounts(): Checking refcounts of s5fs filesystem on block device with major 1, minor 0
-[0m[0mfs/s5fs/s5fs.c:1154 s5fs_check_refcounts(): Refcount check of s5fs filesystem on block device with major 1, minor 0 completed successfully.
-[0mpanic in proc/kthread.c:70 kthread_destroy(): assertion failed: t && t->kt_kstack
+[0mpanic in mm/pagetable.c:253 _pt_fault_handler(): 
+Page faulted while accessing 0x0804f074
+
 Kernel Halting.
 
