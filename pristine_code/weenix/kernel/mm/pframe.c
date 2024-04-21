@@ -374,6 +374,9 @@ int pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
         - This routine may block at the mmobj operation level.
         */
 
+        pframe_t *pf = NULL;
+        int pframe_resident = 0;
+
         // Identify the page frame (pframe) that represents the page specified by the object and page number.
         pframe_t *pf = pframe_get_resident(o, pagenum);
 
@@ -388,19 +391,25 @@ int pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
                 *result = pf;
                 return 0;
         }
+        else
+        {
+                // check if there's a need to call the pageoutd function and wake it up if necessary.
+                if (pageoutd_needed())
+                        pageoutd_wakeup();
 
-        // If the page is not in memory, allocate a new page and fill it. This operation may cause the routine to block.
+                // allocate a new page
+                pf = pframe_alloc(o, pagenum);
 
-        // check if there's a need to call the pageoutd function and wake it up if necessary.
-        if (pageoutd_needed())
-                pageoutd_wakeup();
+                if (NULL == pf)
+                        return -ENOMEM; // case: not enough kernel memory
 
-        // allocate a new page
-        pf = pframe_alloc(o, pagenum);
+                *result = pf;
+                int code = pframe_fill(pf);
+                if (code < 0)
+                        return code;
 
-        // The returned page is guaranteed to stay in memory until the calling context blocks without first pinning the page.
-        *result = pf;
-        return 0;
+                return 0;
+        }
 }
 
 /*
