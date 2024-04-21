@@ -374,7 +374,6 @@ int pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
         - This routine may block at the mmobj operation level.
         */
 
-        pframe_t *pf = NULL;
         int pframe_resident = 0;
 
         // Identify the page frame (pframe) that represents the page specified by the object and page number.
