@@ -445,11 +445,6 @@ void pframe_pin(pframe_t *pf)
                 // increment npinned
                 npinned++;
         }
-        else
-        {
-                // If already pinned, Increases the pin count on this page
-                npinned++;
-        }
         pf->pf_pincount++;
 }
 
