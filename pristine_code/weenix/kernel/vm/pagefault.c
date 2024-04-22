@@ -142,7 +142,7 @@ void handle_pagefault(uintptr_t vaddr, uint32_t cause)
         }
 
         // Call pt_map to add the new mapping to the appropriate page table
-        ret = pt_map(curproc->p_pagedir, (uintptr_t)PN_TO_ADDR(ADDR_TO_PN(vaddr)), (uintptr_t)pf->pf_addr, cause);
+        ret = pt_map(curproc->p_pagedir, (uintptr_t)PN_TO_ADDR(ADDR_TO_PN(vaddr)), (uintptr_t)pf->pf_addr, vma->vma_prot, vma->vma_prot);
         if (ret < 0)
         {
                 KASSERT(ret >= 0);
