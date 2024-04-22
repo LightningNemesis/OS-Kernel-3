@@ -131,12 +131,7 @@ void handle_pagefault(uintptr_t vaddr, uint32_t cause)
                                                 KASSERT(ret >= 0);
                                                 do_exit(EFAULT);
                                         }
-                                        ret = pframe_unpin(old_pf);
-                                        if (ret < 0)
-                                        {
-                                                KASSERT(ret >= 0);
-                                                do_exit(EFAULT);
-                                        }
+                                        pframe_unpin(old_pf);
                                 }
                         }
                 }
