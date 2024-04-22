@@ -207,20 +207,50 @@ anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 static int
 anon_fillpage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_fillpage");
+        // NOT_YET_IMPLEMENTED("VM: anon_fillpage");
+        // return 0;
+
+        // check if page frame is valid
+        KASSERT(pf != NULL);
+        KASSERT(o != NULL);
+
+        // fill the page frame with zeros
+        memset(pf->pf_addr, 0, PAGE_SIZE);
+
+        // return 0
         return 0;
 }
 
 static int
 anon_dirtypage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_dirtypage");
-        return -1;
+        // NOT_YET_IMPLEMENTED("VM: anon_dirtypage");
+        // return -1;
+
+        // check if page frame is valid
+        KASSERT(pf != NULL);
+        KASSERT(o != NULL);
+
+        // mark the page as dirty
+        pf->pf_flags |= PF_DIRTY;
+
+        // return 0
+        return 0;
 }
 
 static int
 anon_cleanpage(mmobj_t *o, pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_cleanpage");
-        return -1;
+        // NOT_YET_IMPLEMENTED("VM: anon_cleanpage");
+        // return -1;
+
+        // check if page frame is valid
+        KASSERT(pf != NULL);
+        KASSERT(o != NULL);
+
+        // mark the page as clean
+        pf->pf_flags &= ~PF_DIRTY;
+
+        // return 0
+        return 0;
 }
