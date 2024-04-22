@@ -483,7 +483,7 @@ int vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
         else
         {
                 mmobj_t *mmobj = NULL;
-                int ret = file->vn_ops->mmap(file, map, &mmobj);
+                int ret = file->vn_ops->mmap(file, new_vma, &mmobj);
                 if (ret < 0)
                 {
                         vmarea_free(new_vma);
