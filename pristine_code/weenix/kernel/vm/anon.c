@@ -35,29 +35,43 @@ static slab_allocator_t *anon_allocator;
 
 static void anon_ref(mmobj_t *o);
 static void anon_put(mmobj_t *o);
-static int  anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf);
-static int  anon_fillpage(mmobj_t *o, pframe_t *pf);
-static int  anon_dirtypage(mmobj_t *o, pframe_t *pf);
-static int  anon_cleanpage(mmobj_t *o, pframe_t *pf);
+static int anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf);
+static int anon_fillpage(mmobj_t *o, pframe_t *pf);
+static int anon_dirtypage(mmobj_t *o, pframe_t *pf);
+static int anon_cleanpage(mmobj_t *o, pframe_t *pf);
 
 static mmobj_ops_t anon_mmobj_ops = {
-        .ref = anon_ref,
-        .put = anon_put,
-        .lookuppage = anon_lookuppage,
-        .fillpage  = anon_fillpage,
-        .dirtypage = anon_dirtypage,
-        .cleanpage = anon_cleanpage
-};
+    .ref = anon_ref,
+    .put = anon_put,
+    .lookuppage = anon_lookuppage,
+    .fillpage = anon_fillpage,
+    .dirtypage = anon_dirtypage,
+    .cleanpage = anon_cleanpage};
 
 /*
  * This function is called at boot time to initialize the
  * anonymous page sub system. Currently it only initializes the
  * anon_allocator object.
  */
-void
-anon_init()
+void anon_init()
 {
-        NOT_YET_IMPLEMENTED("VM: anon_init");
+        // NOT_YET_IMPLEMENTED("VM: anon_init");
+
+        // Initialize the anon_allocator obj
+        anon_allocator = slab_allocator_create("anonobj", sizeof(mmobj_t));
+
+        // Check if the anon_allocator obj is NULL
+        if (anon_allocator == NULL)
+        {
+                // Print an error message
+                dbg(DBG_ERROR, "ERROR: anon_allocator is NULL\n");
+        }
+
+        // Increment the anon_count
+        anon_count++;
+
+        // Print a debug message
+        dbg(DBG_PRINT, "DEBUG: anon_init() called\n");
 }
 
 /*
@@ -66,11 +80,29 @@ anon_init()
  * definitions which can be of use here. Make sure your initial
  * reference count is correct.
  */
-mmobj_t *
-anon_create()
+mmobj_t *anon_create()
 {
-        NOT_YET_IMPLEMENTED("VM: anon_create");
-        return NULL;
+        // NOT_YET_IMPLEMENTED("VM: anon_create");
+        // return NULL;
+
+        // Use anon_allocator to allocate the mmobj
+        mmobj_t *mmobj = (mmobj_t *)slab_obj_alloc(anon_allocator);
+
+        // Check if the mmobj is NULL
+        if (mmobj == NULL)
+        {
+                // Print an error message
+                dbg(DBG_ERROR, "ERROR: mmobj is NULL\n");
+        }
+
+        // Initialize the mmobj
+        mmobj_init(mmobj, &anon_mmobj_ops);
+
+        // Set the reference count to 1
+        mmobj->mmo_refcount = 1;
+
+        // Return the mmobj
+        return mmobj;
 }
 
 /* Implementation of mmobj entry points: */
@@ -81,7 +113,10 @@ anon_create()
 static void
 anon_ref(mmobj_t *o)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_ref");
+        // NOT_YET_IMPLEMENTED("VM: anon_ref");
+
+        // Increment the reference count
+        o->mmo_refcount++;
 }
 
 /*
@@ -95,7 +130,26 @@ anon_ref(mmobj_t *o)
 static void
 anon_put(mmobj_t *o)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_put");
+        // NOT_YET_IMPLEMENTED("VM: anon_put");
+
+        // Decrement the reference count
+        o->mmo_refcount--;
+
+        // Check if the reference count is equal to the number of resident pages
+        if (o->mmo_refcount == o->mmo_nrespages)
+        {
+                // Unpin and uncache all of the object's pages
+                pframe_t *pf;
+                list_iterate_begin(&o->mmo_respages, pf, pframe_t, pf_olink)
+                {
+                        pframe_unpin(pf);
+                        pframe_free(pf);
+                }
+                list_iterate_end();
+
+                // Free the object
+                slab_obj_free(anon_allocator, o);
+        }
 }
 
 /* Get the corresponding page from the mmobj. No special handling is
@@ -103,8 +157,49 @@ anon_put(mmobj_t *o)
 static int
 anon_lookuppage(mmobj_t *o, uint32_t pagenum, int forwrite, pframe_t **pf)
 {
-        NOT_YET_IMPLEMENTED("VM: anon_lookuppage");
-        return -1;
+        // NOT_YET_IMPLEMENTED("VM: anon_lookuppage");
+        // return -1;
+
+        // create page frame
+        pframe_t *page_frame;
+
+        // iterate over the resident pages
+        list_iterate_begin(&o->mmo_respages, page_frame, pframe_t, pf_olink)
+        {
+                // check if the page frame is the one we are looking for
+                if (page_frame->pf_pagenum == pagenum)
+                {
+                        // pin the page frame
+                        pframe_pin(page_frame);
+                        // set the page frame
+                        *pf = page_frame;
+                        // return 0
+                        return 0;
+                }
+        }
+        list_iterate_end();
+
+        // create a new page frame
+        int ret = pframe_get(o, pagenum, &page_frame);
+
+        // check if the return value is less than 0
+        if (ret < 0)
+        {
+                // return -1
+                return -1;
+        }
+
+        // pin the page frame
+        pframe_pin(page_frame);
+
+        // add the page frame to the resident pages list
+        list_insert_tail(&o->mmo_respages, &page_frame->pf_olink);
+
+        // set the page frame
+        *pf = page_frame;
+
+        // return 0
+        return 0;
 }
 
 /* The following three functions should not be difficult. */

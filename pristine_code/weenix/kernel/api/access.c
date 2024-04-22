@@ -40,7 +40,8 @@
  */
 int copy_from_user(void *kaddr, const void *uaddr, size_t nbytes)
 {
-        if (!range_perm(curproc, uaddr, nbytes, PROT_READ)) {
+        if (!range_perm(curproc, uaddr, nbytes, PROT_READ))
+        {
                 return -EFAULT;
         }
         return vmmap_read(curproc->p_vmmap, uaddr, kaddr, nbytes);
@@ -48,7 +49,8 @@ int copy_from_user(void *kaddr, const void *uaddr, size_t nbytes)
 
 int copy_to_user(void *uaddr, const void *kaddr, size_t nbytes)
 {
-        if (!range_perm(curproc, uaddr, nbytes, PROT_WRITE)) {
+        if (!range_perm(curproc, uaddr, nbytes, PROT_WRITE))
+        {
                 return -EFAULT;
         }
         return vmmap_write(curproc->p_vmmap, uaddr, kaddr, nbytes);
@@ -64,11 +66,13 @@ char *user_strdup(argstr_t *ustr)
         char *kstr;
         int ret;
 
-        if (NULL == (kstr = (char *) kmalloc(ustr->as_len + 1))) {
+        if (NULL == (kstr = (char *)kmalloc(ustr->as_len + 1)))
+        {
                 curthr->kt_errno = ENOMEM;
                 return NULL;
         }
-        if (0 > (ret = copy_from_user(kstr, ustr->as_str, ustr->as_len + 1))) {
+        if (0 > (ret = copy_from_user(kstr, ustr->as_str, ustr->as_len + 1)))
+        {
                 curthr->kt_errno = -ret;
                 kfree(kstr);
                 return NULL;
@@ -86,23 +90,28 @@ char **user_vecdup(argvec_t *uvec)
         size_t i;
         int ret;
 
-        if (NULL == (temp_kvec = (argstr_t *) kmalloc((uvec->av_len + 1) * sizeof(argstr_t)))) {
+        if (NULL == (temp_kvec = (argstr_t *)kmalloc((uvec->av_len + 1) * sizeof(argstr_t))))
+        {
                 ret = -ENOMEM;
                 goto fail;
         }
-        if (NULL == (kvec = (char **) kmalloc((uvec->av_len + 1) * sizeof(char *)))) {
+        if (NULL == (kvec = (char **)kmalloc((uvec->av_len + 1) * sizeof(char *))))
+        {
                 ret = -ENOMEM;
                 goto fail;
         }
         /* Copy over the array of argstrs */
         if (0 > (ret = copy_from_user(temp_kvec, uvec->av_vec,
-                                      (uvec->av_len + 1) * sizeof(argstr_t)))) {
+                                      (uvec->av_len + 1) * sizeof(argstr_t))))
+        {
                 goto fail;
         }
 
         /* For each arstr in temp_kvec, user_strdup a copy and put in kvec */
-        for (i = 0; i < uvec->av_len; i++) {
-                if (NULL == (kvec[i] = user_strdup(&temp_kvec[i]))) {
+        for (i = 0; i < uvec->av_len; i++)
+        {
+                if (NULL == (kvec[i] = user_strdup(&temp_kvec[i])))
+                {
                         /* Need to clean up all allocated stuff; errno set in strdup */
                         ret = -curthr->kt_errno;
                         goto fail;
@@ -114,9 +123,12 @@ char **user_vecdup(argvec_t *uvec)
         return kvec;
 
 fail:
-        if (kvec != NULL) {
-                for (i = 0; kvec[i] != NULL; i++) {
-                        if (kvec[i] != NULL) {
+        if (kvec != NULL)
+        {
+                for (i = 0; kvec[i] != NULL; i++)
+                {
+                        if (kvec[i] != NULL)
+                        {
                                 kfree(kvec[i]);
                         }
                 }
@@ -138,11 +150,33 @@ fail:
  * function should return 1 on success, and 0 on failure (think of it as
  * anwering the question "does process p have permission perm on address vaddr?")
  */
-int
-addr_perm(struct proc *p, const void *vaddr, int perm)
+int addr_perm(struct proc *p, const void *vaddr, int perm)
 {
-        NOT_YET_IMPLEMENTED("VM: addr_perm");
-        return 0;
+        // NOT_YET_IMPLEMENTED("VM: addr_perm");
+        // return 0;
+
+        // Find the vm_area that contains vaddr
+        vmarea_t *vma = vmmap_lookup(p->p_vmmap, ADDR_TO_PN(vaddr));
+        if (vma == NULL)
+        {
+                return 0;
+        }
+
+        // Check the permissions on the vm_area to see if the operation that caused the fault is allowed
+        if ((perm & PROT_EXEC) && !(vma->vma_prot & PROT_EXEC)) // if the operation is an execution
+        {
+                return 0;
+        }
+        if ((perm & PROT_WRITE) && !(vma->vma_prot & PROT_WRITE)) // if the operation is a write
+        {
+                return 0;
+        }
+        if ((perm & PROT_READ) && !(vma->vma_prot & PROT_READ)) // if the operation is a read
+        {
+                return 0;
+        }
+
+        return 1;
 }
 
 /*
@@ -154,9 +188,20 @@ addr_perm(struct proc *p, const void *vaddr, int perm)
  * Like addr_perm, this function should return 1 if the range is valid for
  * the given permissions, and 0 otherwise.
  */
-int
-range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
+int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
 {
-        NOT_YET_IMPLEMENTED("VM: range_perm");
-        return 0;
+        // NOT_YET_IMPLEMENTED("VM: range_perm");
+        // return 0;
+
+        // Iterate over the range of addresses in steps of the page size
+        for (uintptr_t vaddr = ADDR_TO_PN(avaddr); vaddr < ADDR_TO_PN(avaddr + len); vaddr++)
+        {
+                if (!addr_perm(p, PN_TO_ADDR(vaddr), perm))
+                {
+                        return 0;
+                }
+        }
+
+        // If all the addresses in the range have the required permissions, return 1
+        return 1;
 }
