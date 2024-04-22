@@ -194,7 +194,7 @@ int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
         // return 0;
 
         // Iterate over the range of addresses in steps of the page size
-        for (uintptr_t vaddr = ADDR_TO_PN(avaddr); vaddr < ADDR_TO_PN(avaddr + len); vaddr++)
+        for (uintptr_t vaddr = ADDR_TO_PN(avaddr); vaddr < ADDR_TO_PN((char *)avaddr + len); vaddr++)
         {
                 if (!addr_perm(p, PN_TO_ADDR(vaddr), perm))
                 {
