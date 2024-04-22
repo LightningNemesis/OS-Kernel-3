@@ -320,6 +320,8 @@ int dir_namev(const char *pathname, size_t *namelen, const char **name,
  *
  * Note: Increments vnode refcount on *res_vnode.
  */
+/*
+// Mine
 int open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
 
@@ -376,6 +378,73 @@ int open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *bas
         vput(nodev); // Release the directory vnode as it's no longer needed
         dbg(DBG_PRINT, "(GRADING2A)\n");
         return lret; // Return the result of the lookup or creation attempt
+}
+*/
+
+// Ridheesh
+int open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
+{
+        // NOT_YET_IMPLEMENTED("VFS: open_namev");
+
+        size_t namelen = 0;
+        const char *name = NULL;
+        vnode_t *resVNodeDir = NULL;
+
+        // resolve pathname
+        int code = dir_namev(pathname, &namelen, &name, base, &resVNodeDir);
+        // if code < 0, parent directory does not exist
+        if (code < 0)
+        {
+                return code;
+        }
+
+        // if namelen == 0, pathname has no last file
+        // but pathname exists, so there is no need to create any file
+        if (namelen == 0)
+        {
+                // set res_vnode to parent directory of res_vnode
+                *res_vnode = resVNodeDir;
+                return 0;
+        }
+        // if pathname has last file
+        // lookup last file of pathname
+        code = lookup(resVNodeDir, name, namelen, res_vnode);
+
+        // if code < 0, last file of pathname does not exist
+        if (code < 0)
+        {
+                // if O_CREAT flag is specified
+                if (flag & O_CREAT)
+                {
+                        // it is time to create last file
+                        // check create() of res_vnode parent directory
+                        KASSERT(NULL != resVNodeDir->vn_ops->create);
+
+                        // create last file
+                        code = resVNodeDir->vn_ops->create(resVNodeDir, name, namelen, res_vnode);
+                        // create() has set res_vnode VNode and increased res_vnode vn_refcount
+                        vput(resVNodeDir);
+
+                        return code;
+                }
+                // if O_CREAT flag is not specified
+                vput(resVNodeDir);
+
+                return code;
+        }
+        // if code == 0, last file of pathname exists
+
+        // check if pathname requires a directory
+        if (pathname[strlen(pathname) - 1] == '/' && !S_ISDIR((*res_vnode)->vn_mode))
+        {
+                vput((*res_vnode));
+                vput(resVNodeDir);
+                return -ENOTDIR;
+        }
+        // lookup() has set res_vnode VNode and increased res_vnode vn_refcount
+        vput(resVNodeDir);
+
+        return 0;
 }
 
 #ifdef __GETCWD__
