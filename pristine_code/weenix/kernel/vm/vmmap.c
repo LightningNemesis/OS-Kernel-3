@@ -800,16 +800,16 @@ int vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 
                 pframe_pin(pf);
 
-                uint32_t paddr = PN_TO_ADDR(pf->pf_pagenum);
+                void *paddr = PN_TO_ADDR(pf->pf_pagenum);
                 size_t bytes_to_copy = min(PAGE_SIZE - offset, bytes_remaining);
 
-                memcpy((void *)(paddr + offset), buf, bytes_to_copy);
+                memcpy((char *)paddr + offset, buf, bytes_to_copy);
 
                 pframe_set_dirty(pf);
                 pframe_unpin(pf);
 
                 vfn++;
-                buf += bytes_to_copy;
+                buf = (char *)buf + bytes_to_copy;
                 bytes_remaining -= bytes_to_copy;
                 offset = 0; // offset is only for the first page
         }
