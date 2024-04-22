@@ -722,10 +722,10 @@ Assume all the areas you are accessing exist: You should not check the permissio
 
                 pframe_pin(pf);
 
-                uint32_t paddr = PN_TO_ADDR(pf->pf_pagenum);
+                void *paddr = PN_TO_ADDR(pf->pf_pagenum);
                 size_t bytes_to_copy = min(PAGE_SIZE - offset, bytes_remaining);
 
-                memcpy(buf, (void *)(paddr + offset), bytes_to_copy);
+                memcpy(buf, (char *)paddr + offset, bytes_to_copy);
 
                 pframe_unpin(pf);
 
@@ -800,7 +800,7 @@ int vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 
                 pframe_pin(pf);
 
-                uint32_t paddr = PAGE_TO_ADDR(pf->pf_pagenum);
+                uint32_t paddr = PN_TO_ADDR(pf->pf_pagenum);
                 size_t bytes_to_copy = min(PAGE_SIZE - offset, bytes_remaining);
 
                 memcpy((void *)(paddr + offset), buf, bytes_to_copy);
