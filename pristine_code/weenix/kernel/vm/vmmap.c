@@ -606,7 +606,7 @@ int vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
                         new_vma->vma_flags = vma->vma_flags;
                         new_vma->vma_obj = vma->vma_obj;
                         vma->vma_end = start_vfn;
-                        list_insert_after(&vma->vma_plink, &new_vma->vma_plink);
+                        list_insert_before(vma->vma_plink.l_next, &new_vma->vma_plink);
                 }
 
                 // case 2: [      *******]**
