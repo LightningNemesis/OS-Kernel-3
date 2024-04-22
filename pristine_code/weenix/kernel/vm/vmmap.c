@@ -436,7 +436,7 @@ int vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
         KASSERT(0 < npages);
         KASSERT(PAGE_ALIGNED(off));
         KASSERT(!(flags & MAP_FIXED) || (flags & MAP_FIXED && lopage != 0));
-        KASSERT(!(flags & MAP_ANONYMOUS) || (flags & MAP_ANONYMOUS && file == NULL));
+        KASSERT(!(flags & MAP_ANON) || (flags & MAP_ANON && file == NULL));
         KASSERT(!(flags & MAP_PRIVATE) || (flags & MAP_PRIVATE && file != NULL));
         KASSERT(!(flags & MAP_SHARED) || (flags & MAP_SHARED && file != NULL));
 
