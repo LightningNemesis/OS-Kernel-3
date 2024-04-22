@@ -454,7 +454,7 @@ int vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
                 vmarea_t *vma = vmmap_lookup(map, vfn);
                 if (vma != NULL)
                 {
-                        if (vma->vma_start <= vfn && vma->vma_end >= vfn + npages)
+                        if (vma->vma_start <= (uint32_t)vfn && vma->vma_end >= (uint32_t)(vfn + npages))
                         {
                                 vmmap_remove(map, vfn, npages);
                         }
