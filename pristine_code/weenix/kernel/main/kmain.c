@@ -363,8 +363,16 @@ initproc_run(int arg1, void *arg2)
 
         if (NULL == kshell)
                 panic("init: Couldn't create kernel shell\n");
-        while (kshell_execute_next(kshell))
-                ;
+
+        // Prepare arguments for kernel_execve
+        char *argv[] = {"/usr/bin/hello", NULL};
+        char *envp[] = {NULL};
+
+        // Call kernel_execve
+        kernel_execve(argv[0], argv, envp);
+
+        // while (kshell_execute_next(kshell))
+        //         ;
         kshell_destroy(kshell);
         dbg(DBG_PRINT, "(GRADING1B)\n");
         dbg(DBG_PRINT, "(GRADING1A)\n");
