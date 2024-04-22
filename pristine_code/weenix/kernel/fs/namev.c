@@ -179,6 +179,11 @@ int finalizeResultVNode(vnode_t **res_vnode, vnode_t *curVNode, vnode_t *curBase
         return 0; // Indicate success.
 }
 
+/*
+My implementation of dir_namev() is as follows:
+*/
+/*
+
 int dir_namev(const char *pathname, size_t *namelen, const char **name,
               vnode_t *base, vnode_t **res_vnode)
 {
@@ -307,6 +312,168 @@ int dir_namev(const char *pathname, size_t *namelen, const char **name,
 
         dbg(DBG_PRINT, "(GRADING2A)\n");
         return 0; // Indicate success
+}
+*/
+
+int dir_namev(const char *pathname, size_t *namelen, const char **name,
+              vnode_t *base, vnode_t **res_vnode)
+{
+        // NOT_YET_IMPLEMENTED("VFS: dir_namev");
+
+        // the "pathname" argument must be non-NULL
+        KASSERT(NULL != pathname);
+        // the "namelen" argument must be non-NULL
+        KASSERT(NULL != namelen);
+        // the "name" argument must be non-NULL
+        KASSERT(NULL != name);
+        // the "res_vnode" argument must be non-NULL
+        KASSERT(NULL != res_vnode);
+
+        // change curBase according to different cases --check pathname first
+        vnode_t *curBase = base;
+        if ('/' == pathname[0])
+        {
+                curBase = vfs_root_vn;
+        }
+        else if (NULL == base)
+        {
+                curBase = curproc->p_cwd;
+        }
+        // pathname resolution must start with a valid directory
+        KASSERT(NULL != curBase);
+
+        // find index limit of res_vnode parent directory
+        // exclude last file of pathname
+        int resVNodeDirIndexLimit = strlen(pathname) - 1;
+        int last_slash_len = 0;
+        while (resVNodeDirIndexLimit >= 0 && pathname[resVNodeDirIndexLimit] == '/')
+        {
+                resVNodeDirIndexLimit--;
+                last_slash_len++;
+        }
+        while (resVNodeDirIndexLimit >= 0)
+        {
+                if ('/' == pathname[resVNodeDirIndexLimit])
+                {
+                        break;
+                }
+                resVNodeDirIndexLimit--;
+        }
+        // set last file attribute
+        *namelen = strlen(pathname) - last_slash_len - (resVNodeDirIndexLimit + 1);
+        // if pathname has last file
+        if (*namelen > 0)
+        {
+                // check last file name length
+                if (*namelen > NAME_LEN)
+                {
+                        return -ENAMETOOLONG;
+                }
+                // if pathname has at least 1 slash
+                if (resVNodeDirIndexLimit >= 0)
+                {
+                        *name = &pathname[resVNodeDirIndexLimit] + 1;
+                }
+                // if pathname has no slash, pathname only has 1 relative path
+                else
+                {
+                        *name = &pathname[0];
+                }
+        }
+        // if pathname has no last file
+        else
+        {
+                *name = NULL;
+        }
+
+        int slow = 0;
+        int fast = 0;
+        vnode_t *curVNode = NULL;
+        vnode_t *prevVNode = NULL;
+
+        // skip slash
+        while (fast < resVNodeDirIndexLimit)
+        {
+                if ('/' != pathname[fast])
+                {
+                        break;
+                }
+                fast++;
+        }
+
+        // try to search each file in pathname until index limit
+        while (fast < resVNodeDirIndexLimit)
+        {
+                // first non-slash char
+                slow = fast;
+                // search the whole file name until slash or end
+                while (fast < resVNodeDirIndexLimit)
+                {
+                        if ('/' == pathname[fast])
+                        {
+                                break;
+                        }
+                        fast++;
+                }
+
+                // found next file at pathname[slow, fast)
+                // check next file name length
+                if (fast - slow > NAME_LEN)
+                {
+                        vput(curVNode);
+                        return -ENAMETOOLONG;
+                }
+                // lookup next file from curBase
+                int code = lookup(curBase, &pathname[slow], fast - slow, &curVNode);
+
+                // we increase VNode vn_refcount(due to successful lookup()) of each file in pathname
+                // so we decrease VNode vn_refcount of each file in pathname
+                // we only want to increase VNode vn_refcount of last file in pathname
+                if (prevVNode != NULL)
+                {
+                        vput(prevVNode);
+                }
+                // if code < 0, next file does not exist
+                if (code < 0)
+                {
+                        return code;
+                }
+
+                // change curBase to next file, prevVNode to curVNode
+                prevVNode = curVNode;
+                curBase = curVNode;
+
+                // skip slash
+                while (fast < resVNodeDirIndexLimit)
+                {
+                        if ('/' != pathname[fast])
+                        {
+                                break;
+                        }
+                        fast++;
+                }
+        }
+
+        // if pathname has >= 2 directory depth(i.e. /../. or /../)
+        if (NULL != curVNode)
+        {
+                if (curBase->vn_ops->lookup == NULL)
+                {
+                        vput(curVNode);
+                        return -ENOTDIR;
+                }
+                // return parent directory VNode of last file
+                *res_vnode = curVNode;
+        }
+        // if pathname has < 2 directory depth(i.e. /.. or /)
+        else
+        {
+                // return curBase VNode
+                *res_vnode = curBase;
+                vref(*res_vnode);
+        }
+
+        return 0;
 }
 
 /* This returns in res_vnode the vnode requested by the other parameters.

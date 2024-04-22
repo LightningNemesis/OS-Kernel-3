@@ -342,6 +342,12 @@ void *
 initproc_run(int arg1, void *arg2)
 {
 
+        char *const argv[] = {NULL};
+        char *const envp[] = {NULL};
+
+        // Call kernel_execve
+        kernel_execve("/usr/bin/hello", argv, envp);
+
 #ifndef __DRIVERS__
         faber_thread_test(0, NULL);
         dbg(DBG_PRINT, "(GRADING1C)\n");
@@ -359,21 +365,14 @@ initproc_run(int arg1, void *arg2)
         kshell_add_command("fstest", faber_fs_thread_test, "Run faber_fs_thread_test().");
         kshell_add_command("dirtest", faber_directory_test, "Run faber_directory_test().");
 #endif
-        kshell_t *kshell = kshell_create(0);
+        // kshell_t *kshell = kshell_create(0);
 
-        if (NULL == kshell)
-                panic("init: Couldn't create kernel shell\n");
-
-        // Prepare arguments for kernel_execve
-        char *argv[] = {"/usr/bin/hello", NULL};
-        char *envp[] = {NULL};
-
-        // Call kernel_execve
-        kernel_execve(argv[0], argv, envp);
+        // if (NULL == kshell)
+        //         panic("init: Couldn't create kernel shell\n");
 
         // while (kshell_execute_next(kshell))
         //         ;
-        kshell_destroy(kshell);
+        // kshell_destroy(kshell);
         dbg(DBG_PRINT, "(GRADING1B)\n");
         dbg(DBG_PRINT, "(GRADING1A)\n");
         return NULL;
