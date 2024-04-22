@@ -66,8 +66,93 @@
  *              address which caused the fault, possible values
  *              can be found in pagefault.h
  */
-void
-handle_pagefault(uintptr_t vaddr, uint32_t cause)
+void handle_pagefault(uintptr_t vaddr, uint32_t cause)
 {
-        NOT_YET_IMPLEMENTED("VM: handle_pagefault");
+        // Find the vmarea that contains the faulted address
+        vmarea_t *vma = vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(vaddr));
+        if (vma == NULL)
+        {
+                KASSERT(vma != NULL);
+                do_exit(EFAULT);
+        }
+
+        // Check the permissions on the vmarea to see if the operation that caused the fault is allowed
+        if (cause == FAULT_EXEC)
+        {
+                if (!(vma->vma_prot & PROT_EXEC))
+                {
+                        do_exit(EFAULT);
+                }
+        }
+        else if (cause == FAULT_WRITE)
+        {
+                if (!(vma->vma_prot & PROT_WRITE))
+                {
+                        do_exit(EFAULT);
+                }
+        }
+        else if (cause == FAULT_PRESENT)
+        {
+                if (!(vma->vma_prot & PROT_READ))
+                {
+                        do_exit(EFAULT);
+                }
+        }
+
+        // Find the correct page in memory or on disk
+        pframe_t *pf = NULL;
+        int ret = pframe_get(vma->vma_obj, ADDR_TO_PN(vaddr) - vma->vma_start, &pf);
+        if (ret < 0)
+        {
+                KASSERT(ret >= 0);
+                do_exit(EFAULT);
+        }
+
+        // If the operation is a write, ensure that it will be handled correctly, including any copy-on-write semantics if applicable
+        if (cause == FAULT_WRITE)
+        {
+                if (vma->vma_prot & PROT_WRITE)
+                {
+                        if (vma->vma_obj->mmo_shadowed)
+                        {
+                                pframe_t *new_pf = NULL;
+                                ret = pframe_lookup(vma->vma_obj, ADDR_TO_PN(vaddr) - vma->vma_start, 0, &new_pf);
+                                if (ret < 0)
+                                {
+                                        KASSERT(ret >= 0);
+                                        do_exit(EFAULT);
+                                }
+                                if (new_pf->pf_obj->mmo_shadowed)
+                                {
+                                        pframe_t *old_pf = NULL;
+                                        ret = pframe_lookup(vma->vma_obj, ADDR_TO_PN(vaddr) - vma->vma_start, 0, &old_pf);
+                                        if (ret < 0)
+                                        {
+                                                KASSERT(ret >= 0);
+                                                do_exit(EFAULT);
+                                        }
+                                        ret = pframe_unpin(old_pf);
+                                        if (ret < 0)
+                                        {
+                                                KASSERT(ret >= 0);
+                                                do_exit(EFAULT);
+                                        }
+                                }
+                        }
+                }
+                else
+                {
+                        do_exit(EFAULT);
+                }
+        }
+
+        // Call pt_map to add the new mapping to the appropriate page table
+        ret = pt_map(curproc->p_pagedir, (uintptr_t)PN_TO_ADDR(ADDR_TO_PN(vaddr)), (uintptr_t)pf->pf_addr, cause);
+        if (ret < 0)
+        {
+                KASSERT(ret >= 0);
+                do_exit(EFAULT);
+        }
+
+        pframe_pin(pf);
 }
