@@ -42,6 +42,8 @@
 #include "mm/mman.h"
 #include "mm/mmobj.h"
 
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
 static slab_allocator_t *vmmap_allocator;
 static slab_allocator_t *vmarea_allocator;
 
@@ -585,7 +587,6 @@ int vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
         uint32_t end_vfn = lopage + npages;
 
         vmarea_t *vma;
-        vmarea_t *next_vma;
 
         list_iterate_begin(&map->vmm_list, vma, vmarea_t, vma_plink)
         {
@@ -697,8 +698,8 @@ Assume all the areas you are accessing exist: You should not check the permissio
         KASSERT(0 < count);
 
         uint32_t vfn = ADDR_TO_PN(vaddr);
-        uint32_t end_vfn = ADDR_TO_PN(vaddr + count);
-        uint32_t offset = ADDR_OFFSET(vaddr);
+        uint32_t end_vfn = ADDR_TO_PN((char *)vaddr + count);
+        uint32_t offset = PAGE_OFFSET(vaddr);
         size_t bytes_remaining = count;
 
         vmarea_t *vma;
@@ -722,7 +723,7 @@ Assume all the areas you are accessing exist: You should not check the permissio
 
                 pframe_pin(pf);
 
-                uint32_t paddr = PAGE_TO_ADDR(pf->pf_pagenum);
+                uint32_t paddr = PN_TO_ADDR(pf->pf_pagenum);
                 size_t bytes_to_copy = min(PAGE_SIZE - offset, bytes_remaining);
 
                 memcpy(buf, (void *)(paddr + offset), bytes_to_copy);
@@ -730,7 +731,7 @@ Assume all the areas you are accessing exist: You should not check the permissio
                 pframe_unpin(pf);
 
                 vfn++;
-                buf += bytes_to_copy;
+                buf = (char *)buf + bytes_to_copy;
                 bytes_remaining -= bytes_to_copy;
                 offset = 0; // offset is only for the first page
         }
@@ -775,8 +776,8 @@ int vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
         KASSERT(0 < count);
 
         uint32_t vfn = ADDR_TO_PN(vaddr);
-        uint32_t end_vfn = ADDR_TO_PN(vaddr + count);
-        uint32_t offset = ADDR_OFFSET(vaddr);
+        uint32_t end_vfn = ADDR_TO_PN((char *)vaddr + count);
+        uint32_t offset = PAGE_OFFSET(vaddr);
         size_t bytes_remaining = count;
 
         vmarea_t *vma;
