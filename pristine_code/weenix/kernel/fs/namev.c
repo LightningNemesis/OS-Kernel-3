@@ -39,6 +39,8 @@
  *
  * Note: returns with the vnode refcount on *result incremented.
  */
+/*
+
 int lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 {
         KASSERT(NULL != dir);
@@ -65,6 +67,30 @@ int lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
         int ret = dir->vn_ops->lookup(dir, name, len, result);
 
         return ret;
+}
+*/
+
+// ridheesh
+int lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
+{
+        // NOT_YET_IMPLEMENTED("VFS: lookup");
+
+        // the "dir" argument must be non-NULL
+        KASSERT(NULL != dir);
+        // the "name" argument must be non-NULL
+        KASSERT(NULL != name);
+        // the "result" argument must be non-NULL
+        KASSERT(NULL != result);
+
+        // if dir has no lookup()
+        if (NULL == dir->vn_ops->lookup)
+        {
+                return -ENOTDIR;
+        }
+        // if dir has lookup(), let it do the work
+        int code = dir->vn_ops->lookup(dir, name, len, result);
+
+        return code;
 }
 
 /* When successful this function returns data in the following "out"-arguments:
